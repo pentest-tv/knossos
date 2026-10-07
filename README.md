@@ -1,6 +1,6 @@
 # Knossos by Pentest.TV (Docker)
 
-Version 0.6.0
+Version 1.0.0
 
 Knossos is the hands-on hacking lab and companion to Thomas Wilhelm's
 *Professional Penetration Testing* (3rd Edition): the containerizable majority of the
