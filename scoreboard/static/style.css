@@ -654,3 +654,7 @@ button.manual:hover {
 @keyframes ctashimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .escape-cta:hover { filter: brightness(1.06); }
 @media (prefers-reduced-motion: reduce) { .escape-cta { animation: none; } }
+
+/* Safety banner: intentionally vulnerable warning */
+.safetybar{background:#2a1414;border-bottom:1px solid #e24b4a;color:#ffd7d2;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;text-align:center;padding:10px 16px;letter-spacing:.01em}
+.safetybar b{color:#ff8f87}
