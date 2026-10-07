@@ -11,6 +11,17 @@ No student setup beyond Docker. Tagline: navigate the labyrinth.
 > Intentionally vulnerable systems. Read SECURITY.md before running. Localhost and an
 > isolated Docker network only; never expose these ports or run on a production machine.
 
+![Knossos scoreboard](docs/scoreboard.jpg)
+
+## Quick start
+
+```
+git clone https://github.com/pentest-tv/knossos.git && cd knossos
+docker compose up -d --build     # all targets + Kali, flags planted automatically
+```
+
+Open the scoreboard at http://localhost:8890 and the attacker Kali at http://localhost:7681. Reset everything with `docker compose down -v`. Problems? See [Troubleshooting](#troubleshooting).
+
 ## System requirements
 
 Measured on a full running deploy (all 28 target containers plus the in-lab Kali,
@@ -37,7 +48,7 @@ tools and the web apps under traffic.
 ## Student experience (after the repo is pinned)
 
 ```
-git clone <repo> && cd lab
+git clone https://github.com/pentest-tv/knossos.git && cd knossos
 docker compose up -d --build                 # all targets + Kali, flags planted automatically
 docker compose down -v                       # reset everything
 ```
