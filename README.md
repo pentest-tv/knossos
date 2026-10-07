@@ -254,3 +254,12 @@ Fixes already baked into the committed files, recorded here for maintainers.
   supports.
 - **`ss` / `ss-lun` not found in a container.** The slim images ship `netstat`, not `ss`.
   Use `netstat -ltn` (TCP) when checking listeners.
+
+
+## License
+
+The original Knossos lab code is released under the MIT License; see [LICENSE](LICENSE). Knossos orchestrates third-party tools and intentionally vulnerable targets that remain under their own licenses; see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
+## Affiliate disclosure
+
+Book links in this lab and on Pentest.TV are Amazon affiliate links. As an Amazon Associate I earn from qualifying purchases.
