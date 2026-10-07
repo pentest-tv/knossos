@@ -26,7 +26,7 @@
       "Gain an initial foothold on the DMZ perimeter",
       "Recover valid credentials and pivot to the internal segment",
       "Reach and exfiltrate the crown-jewel data on the file server",
-      "Capture each module's flag and record your steps for the capstone report"
+      "Capture each module's flag and clear all 33 objectives to escape the Labyrinth"
     ],
     "rules": [
       "The Kali attacker box (172.28.10.10 / 172.28.20.10) is yours. Everything else is a target.",
