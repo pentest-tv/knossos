@@ -658,3 +658,28 @@ button.manual:hover {
 /* Safety banner: intentionally vulnerable warning */
 .safetybar{background:#2a1414;border-bottom:1px solid #e24b4a;color:#ffd7d2;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;text-align:center;padding:10px 16px;letter-spacing:.01em}
 .safetybar b{color:#ff8f87}
+
+
+/* ======================= optional email signup card ===================== */
+.card.signup { position: relative; }
+.card.signup .signup-lede { color: var(--muted); font-size: 14px; line-height: 1.55; margin: 0 0 14px; max-width: 620px; }
+.signup-x {
+  position: absolute; top: 14px; right: 16px; background: none; border: none;
+  color: var(--muted2); font-size: 22px; line-height: 1; cursor: pointer; padding: 2px 6px;
+  transition: color .15s;
+}
+.signup-x:hover { color: var(--ink); }
+.signup-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.signup-form input[type=email] {
+  flex: 1 1 260px; background: var(--bg2); border: 1px solid var(--line2); color: var(--ink);
+  border-radius: 8px; padding: 9px 12px; font-family: var(--mono); font-size: 13.5px;
+  transition: border-color .18s, box-shadow .18s;
+}
+.signup-form input[type=email]:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(0,240,255,.14); }
+.signup-form input[type=email]::placeholder { color: var(--muted2); }
+.signup-form button {
+  background: rgba(0,240,255,.08); color: var(--teal); border: 1px solid rgba(0,240,255,.35);
+  border-radius: 8px; padding: 9px 18px; font-family: var(--mono); font-size: 13.5px; font-weight: 600;
+  cursor: pointer; transition: background .15s, border-color .15s, box-shadow .15s;
+}
+.signup-form button:hover { background: rgba(0,240,255,.16); border-color: var(--teal); box-shadow: 0 0 14px rgba(0,240,255,.22); }

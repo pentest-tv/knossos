@@ -342,6 +342,17 @@
     {% endfor %}
     </div>
   </section>
+  <!-- optional email signup: release notes / new modules -->
+  <section class="card signup" id="signupCard">
+    <button class="signup-x" type="button" aria-label="Dismiss" data-signup-dismiss>&times;</button>
+    <h2>New modules, in your inbox</h2>
+    <p class="signup-lede">Optional. Get an email when new flags, modules, or walkthroughs drop. A couple of times a month at most, and you can leave anytime.</p>
+    <form class="signup-form" action="https://pentest.us17.list-manage.com/subscribe/post?u=e8c3655bc7a2a07b7b8194c38&amp;id=686b48e8c3&amp;f_id=007b68e0f0" method="post" target="_blank" novalidate>
+      <input type="email" name="EMAIL" placeholder="you@example.com" aria-label="Email address" required>
+      <button type="submit" name="subscribe">Subscribe</button>
+      <div aria-hidden="true" style="position:absolute;left:-5000px"><input type="text" name="b_e8c3655bc7a2a07b7b8194c38_686b48e8c3" tabindex="-1" value=""></div>
+    </form>
+  </section>
 </main>
 
 <footer>
@@ -420,6 +431,18 @@ window.addEventListener('DOMContentLoaded', () => {
   onScroll();
   btn.addEventListener('click', () => {
     window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+  });
+})();
+
+// Optional signup card: remember dismissal across reloads (per browser).
+(function () {
+  var card = document.getElementById('signupCard');
+  if (!card) return;
+  try { if (localStorage.getItem('knossos.signup.dismissed') === '1') { card.style.display = 'none'; return; } } catch (e) {}
+  var x = card.querySelector('[data-signup-dismiss]');
+  if (x) x.addEventListener('click', function () {
+    card.style.display = 'none';
+    try { localStorage.setItem('knossos.signup.dismissed', '1'); } catch (e) {}
   });
 })();
 
