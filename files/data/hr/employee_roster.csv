@@ -1,0 +1,8 @@
+employee_id,name,username,department,title,manager,start_date
+1001,John Smith,jsmith,IT,Systems Administrator,mkhan,2019-03-04
+1002,Priya Morgan,pmorgan,Finance,Finance Analyst,mkhan,2021-07-12
+1003,Aaron Hill,ahill,IT,Help Desk Technician,jsmith,2022-01-10
+1004,Maya Khan,mkhan,HR,HR Manager,,2017-09-01
+1005,Rachel Turner,rturner,Engineering,Software Engineer,dwood,2020-11-23
+1006,Li Chen,lchen,IT,Network Engineer,jsmith,2018-05-15
+1007,Derek Wood,dwood,Engineering,DevOps Engineer,mkhan,2019-08-19

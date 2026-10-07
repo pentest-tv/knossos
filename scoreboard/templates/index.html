@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Knossos by Pentest.TV</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon-knossos-1.0.0.ico') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='knossos-icon-180-1.0.0.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+<body>
+
+<!-- top utility bar: real Pentest.TV links -->
+<div class="topbar">
+  <div class="topbar-in">
+    <span class="sig">operator@<b>pentest.tv</b>:~$ ./knossos --status</span>
+    <nav>
+      <a href="https://pentest.tv" target="_blank" rel="noopener">site</a>
+      <a href="https://youtube.com/@pentest_TV" target="_blank" rel="noopener">youtube</a>
+      <a href="https://pentest.tv/discord/" target="_blank" rel="noopener">discord</a>
+    </nav>
+  </div>
+</div>
+
+<!-- hero -->
+<header class="hero">
+  <div class="hero-in">
+    <span class="rangepill"><span class="beat"></span> LAB ONLINE</span>
+
+    <div class="lockup">
+      <img class="hero-lockup" src="{{ url_for('static', filename='knossos-lockup-dark-bg-1.0.0.svg') }}"
+           alt="Knossos by Pentest.TV">
+    </div>
+    <div class="hero-tagline">Navigate the labyrinth</div>
+
+    <p class="hero-tag">The hands-on hacking lab and companion to Thomas Wilhelm's
+       <b>Professional Penetration Testing</b>. The lab is the maze; the book is the thread
+       to its center. Breach the DMZ, pivot inward, reach the crown jewels, and capture the
+       flags. <b>Real skills. Real mentoring.</b></p>
+
+    <div class="bootline">
+      <span class="prompt">[+]</span>
+      <span id="boot" data-text="initializing engagement :: {{ total }} objectives armed across 3 network zones"></span>
+      <span class="cursor"></span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- onboarding -->
+  <section class="card intro">
+    <h2>Brief</h2>
+    <p>This lab is where you do the work. The book is your required reading; each module
+       maps to a chapter. Recon the network, exploit a foothold in the DMZ, pivot to the
+       internal segment, reach the <em>crown-jewel data</em>, and submit the flags you recover.</p>
+    <div class="startgrid">
+      <div><span class="num">1</span> Attack from <a href="http://localhost:7681" target="_blank" rel="noopener">Kali in the browser</a>, or your own Kali.</div>
+      <div><span class="num">2</span> Run GUI tools (Burp) on your own OS against the published ports.</div>
+      <div><span class="num">3</span> Capture flags and submit them below. Score tracks automatically.</div>
+    </div>
+  </section>
+
+  {% if book or book2 %}
+  <!-- reading: required + optional -->
+  <section class="card">
+    <h2>Reading</h2>
+    <div class="readgrid">
+      {% if book %}
+      <div class="book">
+        <a class="bookcover" href="{{ book.url }}" target="_blank" rel="noopener">
+          <img src="{{ url_for('static', filename=book.cover) }}" alt="{{ book.title }}"
+               onerror="this.closest('.bookcover').classList.add('noimg')">
+        </a>
+        <div class="bookmeta">
+          <div class="bookkicker req">Required reading</div>
+          <div class="booktitle">{{ book.title }}</div>
+          <div class="booksub">{{ book.subtitle }} &middot; {{ book.author }}</div>
+          <p>{{ book.blurb }}</p>
+          <a class="buy" href="{{ book.url }}" target="_blank" rel="noopener">Get the book on Amazon</a>
+        </div>
+      </div>
+      {% endif %}
+      {% if book2 %}
+      <div class="book">
+        <a class="bookcover" href="{{ book2.url }}" target="_blank" rel="noopener">
+          <img src="{{ url_for('static', filename=book2.cover) }}" alt="{{ book2.title }}"
+               onerror="this.closest('.bookcover').classList.add('noimg')">
+        </a>
+        <div class="bookmeta">
+          <div class="bookkicker opt">Optional</div>
+          <div class="booktitle">{{ book2.title }}</div>
+          <div class="booksub">{{ book2.subtitle }} &middot; {{ book2.author }}</div>
+          <p>{{ book2.blurb }}</p>
+          <a class="buy ghostbuy" href="{{ book2.url }}" target="_blank" rel="noopener">Get the book on Amazon</a>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if scope %}
+  <!-- engagement scope -->
+  <section class="card scope">
+    <h2>Engagement scope</h2>
+    <p class="scopelede">{{ scope.summary }}</p>
+    <div class="scopecols">
+      <div class="scopebox ok">
+        <div class="scopeh">In scope</div>
+        <ul>{% for i in scope.in_scope %}<li>{{ i }}</li>{% endfor %}</ul>
+      </div>
+      <div class="scopebox no">
+        <div class="scopeh">Out of scope</div>
+        <ul>{% for i in scope.out_of_scope %}<li>{{ i }}</li>{% endfor %}</ul>
+      </div>
+    </div>
+    <div class="scopeh">Objectives</div>
+    <ol class="scopeobj">{% for o in scope.objectives %}<li>{{ o }}</li>{% endfor %}</ol>
+    <div class="scopeh">Rules of engagement</div>
+    <ul class="scoperules">{% for r in scope.rules %}<li>{{ r }}</li>{% endfor %}</ul>
+    {% if scope.methodology %}<p class="scopenote">{{ scope.methodology }}</p>{% endif %}
+  </section>
+  {% endif %}
+
+  <!-- attack chain -->
+  <section class="card">
+    <h2>Attack chain</h2>
+    <p class="chainintro">The engagement runs left to right through the kill chain. The internal
+       segment only opens up once you hold the DMZ and recover credentials, so work the phases in
+       order. How you break each system is yours to figure out, that is the exercise.</p>
+    <div class="lanes">
+      <div class="lane dmz">
+        <div class="lanehdr">DMZ <span>perimeter</span></div>
+        <div class="lanerow">
+          <div class="stage">
+            <span class="stagenum">1</span>
+            <div class="stagerole">Recon &amp; scan</div>
+            <div class="stagename">Map and assess</div>
+            <div class="stageip">DNS transfer, SNMP, vuln scan, web discovery</div>
+          </div>
+          <span class="chainarrow">&rarr;</span>
+          <div class="stage">
+            <span class="stagenum">2</span>
+            <div class="stagerole">Initial access</div>
+            <div class="stagename">Exploit a service</div>
+            <div class="stageip">Samba/FTP, MySQL, PostgreSQL, VNC, SMTP</div>
+          </div>
+          <span class="chainarrow">&rarr;</span>
+          <div class="stage">
+            <span class="stagenum">3</span>
+            <div class="stagerole">Credential access</div>
+            <div class="stagename">Get the keys</div>
+            <div class="stageip">brute force, spraying, crack hashes, pillage</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pivotband">
+        <span class="pivotbadge">&darr; pivot inward &middot; the internal segment only opens once you hold the DMZ</span>
+      </div>
+
+      <div class="lane int">
+        <div class="lanehdr">Internal <span>trusted</span></div>
+        <div class="lanerow">
+          <div class="stage">
+            <span class="stagenum">4</span>
+            <div class="stagerole">Command &amp; control</div>
+            <div class="stagename">Pivot and beacon</div>
+            <div class="stageip">pivot, Sliver C2, payload delivery, privesc</div>
+          </div>
+          <span class="chainarrow">&rarr;</span>
+          <div class="stage">
+            <span class="stagenum">5</span>
+            <div class="stagerole">Lateral movement</div>
+            <div class="stagename">Reuse and spread</div>
+            <div class="stageip">looted creds to internal hosts</div>
+          </div>
+          <span class="chainarrow">&rarr;</span>
+          <div class="stage goal">
+            <span class="stagenum">6</span>
+            <div class="stagerole">Objective</div>
+            <div class="stagename">Exfiltrate the data</div>
+            <div class="stageip">crown-jewel share, DNS exfil</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="chainnote">Off the main path: the web apps and the phishing framework sit in the DMZ and
+       can be attacked on their own. The ARP MITM victim lives inside, so reach it after you pivot.</p>
+  </section>
+
+  <!-- live lab status -->
+  <section class="card" id="labstatus">
+    <h2>Lab status <span class="live" id="liveclock">live</span></h2>
+    {% for zone, rows in zones.items() %}
+      <details class="zonewrap" data-persist="zone-{{ zone }}" {{ 'open' if zone == 'Attack Platform' }}>
+        <summary class="zone">{{ zone }} <span class="zcount">{{ rows|length }}</span></summary>
+        <div class="statusgrid">
+          {% for s in rows %}
+          <div class="svc">
+            <span class="dot {{ s.level }}" data-name="{{ s.name }}" title="{{ s.state }} / {{ s.health }}"></span>
+            <div class="svcmeta">
+              <div class="svcname">{{ s.label }}</div>
+              <div class="svcmod">{{ s.modules }}</div>
+              <div class="svcnet">{{ s.ip }}{% if s.host %} &middot; {{ s.host }}{% endif %}</div>
+            </div>
+            <div class="svcact">
+              {% if s.url %}<a href="{{ s.url }}" target="_blank" rel="noopener">open</a>{% endif %}
+              {% if s.installing %}
+                <button class="mini" disabled>installing...</button>
+              {% elif s.installable %}
+                <form method="post" action="{{ url_for('install_attacker') }}">
+                  <button class="mini install">install</button>
+                </form>
+              {% elif s.name not in ['pentesttv-scoreboard','pentesttv-flaginit'] %}
+                <form method="post" action="{{ url_for('restart_one') }}">
+                  <input type="hidden" name="name" value="{{ s.name }}">
+                  <button class="mini">restart</button>
+                </form>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </details>
+    {% endfor %}
+  </section>
+
+  <!-- operator status: sits right above the modules; scroll target after a flag submit -->
+  <div id="status" style="scroll-margin-top:72px">
+  {% with messages = get_flashed_messages(with_categories=false) %}
+    {% for cat, msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}
+  {% endwith %}
+
+  <section class="card">
+    <h2>Operator status</h2>
+    <div class="hud">
+      <div class="maze">
+        <svg class="mazeprog" viewBox="-104 -104 208 208" role="img"
+             aria-label="Progress through the maze: {{ pct }}% to the center">
+          <circle r="96" fill="#0C1218"/>
+          <!-- maze walls (unlit) -->
+          <path class="walls" fill="none" stroke-width="7" stroke-linecap="butt"
+                d="M8.49 -87.59A88 88 0 1 1 -8.49 -87.59M55.94 42.09A70 70 0 0 1 2.39 69.96M-14.5 68.48A70 70 0 0 1 -51.16 -47.78M-38.17 -58.68A70 70 0 0 1 64.41 27.4M0.58 52A52 52 0 0 1 -40.2 32.98M-48.66 18.32A52 52 0 0 1 -51.11 -9.6M-45.32 -25.5A52 52 0 0 1 40.2 -32.98M48.66 -18.32A52 52 0 0 1 17.24 49.06M8.41 -32.94A34 34 0 1 1 -8.41 -32.94M-69.71 58.49L-51.32 43.07M-70.83 17.66L-47.54 11.85M41.87 -59.8L28.11 -40.14M-38.21 39.56L-21.53 22.3M15.16 -52.87L8.54 -29.8M51.68 18.81L29.13 10.6"/>
+          <!-- the thread: faint route ahead, then the lit progress on top -->
+          <path class="thread-track" fill="none" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"
+                d="M0 -101V-79A79 79 0 0 1 68.42 39.5L52.83 30.5A61 61 0 0 1 -52.83 30.5L-37.24 21.5A43 43 0 0 1 -0 -43V-14"/>
+          <path class="thread-fill" fill="none" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"
+                data-pct="{{ pct }}"
+                d="M0 -101V-79A79 79 0 0 1 68.42 39.5L52.83 30.5A61 61 0 0 1 -52.83 30.5L-37.24 21.5A43 43 0 0 1 -0 -43V-14"/>
+          <!-- the core lights up as you near the center -->
+          <circle class="core" r="15" fill="#f5cc6a" style="opacity: {{ [0.2, pct/100]|max|round(2) }}"/>
+        </svg>
+        <div class="mazecap"><b>{{ pct }}%</b> cleared</div>
+      </div>
+
+      <div class="hud-right">
+        <div class="solvedline">
+          <span class="big"><b>{{ solved }}</b></span>
+          <span class="of">/ {{ total }} objectives captured</span>
+        </div>
+        <div class="segbar"><div class="segfill" data-pct="{{ pct }}"></div></div>
+        <div class="chips">
+          <span class="chip ok"><b>{{ solved }}</b> flags</span>
+          <span class="chip"><b>{{ total - solved }}</b> remaining</span>
+          <span class="chip">3 zones</span>
+        </div>
+        {% if complete %}<a class="cert escape-cta" href="{{ url_for('escape') }}">Labyrinth cleared &mdash; find the way out &rarr;</a>{% endif %}
+
+        <div class="controls">
+          <form method="post" action="{{ url_for('reset_progress') }}">
+            <button class="ghost">Reset my progress</button></form>
+          <form method="post" action="{{ url_for('replant') }}"
+                onsubmit="return confirm('Re-plant all flags with new values and reset progress?');">
+            <button class="ghost">Re-plant flags</button></form>
+          <form method="post" action="{{ url_for('reset_range') }}"
+                onsubmit="return confirm('Restart every target, re-plant flags, and clear progress?');">
+            <button class="danger">Reset entire lab</button></form>
+        </div>
+        {% if not docker_ok %}
+          <div class="flash error" style="margin-top:14px">Live status and controls are off: the Docker socket is not mounted.</div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+  </div>
+
+  <!-- modules -->
+  <section class="card">
+    <h2>Modules</h2>
+    <div class="phasecol">
+    {% for ph in phases %}
+    <details class="phasewrap" data-persist="phase-{{ ph.n }}" {{ 'open' if ph.n == 1 }}>
+      <summary class="phasehead">
+        <span class="phasekicker">Phase {{ ph.n }}</span>
+        <span class="phaselabel">{{ ph.name }}</span>
+        <span class="phasecount">{{ ph.solved }}/{{ ph.total }}</span>
+      </summary>
+      <div class="modgrid">
+      {% for m in ph.modules %}
+      <article class="module {{ 'done' if m.solved else '' }}">
+      <div class="mhead">
+        <span class="chapter">Ch {{ m.chapter }}</span>
+        <h3>{{ m.title }}</h3>
+        <span class="state">{{ 'Solved' if m.solved else 'Open' }}</span>
+      </div>
+      {% if m.objective %}<p class="objective">{{ m.objective }}</p>{% endif %}
+      {# Solutions are intentionally not shown here (video walkthroughs cover them); the
+         solution steps remain in course.json so the answer-key document stays in sync. #}
+      {% if m.hint %}
+      <div class="reveal">
+        <details class="disc hint">
+          <summary>Hint</summary>
+          <p>{{ m.hint }}</p>
+        </details>
+      </div>
+      {% endif %}
+      <div class="actions">
+        {% if m.target %}<a class="target" href="{{ m.target }}" target="_blank" rel="noopener">Open target</a>{% endif %}
+        {% if m.grading == 'flag' %}
+          <form method="post" action="{{ url_for('submit') }}" class="flagform">
+            <input type="hidden" name="module_id" value="{{ m.id }}">
+            <input type="text" name="flag" placeholder="PENTESTTV{...}" autocomplete="off" {{ 'disabled' if m.solved }}>
+            <button type="submit" {{ 'disabled' if m.solved }}>Submit</button>
+          </form>
+        {% else %}
+          <form method="post" action="{{ url_for('complete') }}">
+            <input type="hidden" name="module_id" value="{{ m.id }}">
+            <button class="manual">{{ 'Mark not done' if m.solved else 'Mark done' }}</button>
+          </form>
+        {% endif %}
+      </div>
+    </article>
+      {% endfor %}
+      </div>
+    </details>
+    {% endfor %}
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span class="fbrand">Knossos</span> by Pentest.TV &middot; lab control center &middot; Real Skills &middot; Real Mentoring<br>
+  Flags are per deploy; progress is stored on this instance only.
+</footer>
+
+<script>
+// live status polling (unchanged contract with /status.json)
+async function poll() {
+  try {
+    const r = await fetch('{{ url_for("status_json") }}');
+    const d = await r.json();
+    for (const [name, info] of Object.entries(d.services)) {
+      document.querySelectorAll('.dot[data-name="'+name+'"]').forEach(el => {
+        el.className = 'dot ' + info.level;
+        el.title = info.state + ' / ' + info.health;
+      });
+    }
+    const c = document.getElementById('liveclock');
+    if (c) c.textContent = 'live ' + new Date().toLocaleTimeString();
+  } catch (e) {}
+}
+setInterval(poll, 5000);
+
+// progressive enhancement: animate the progress ring + bar on load
+window.addEventListener('DOMContentLoaded', () => {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fill  = document.querySelector('.segfill');
+  const pct   = fill ? (fill.dataset.pct + '%') : null;
+
+  // Maze thread: reveal the gold thread from the entrance toward the core by percentage.
+  const thread = document.querySelector('.mazeprog .thread-fill');
+  let threadTarget = 0, L = 0;
+  if (thread) {
+    L = thread.getTotalLength();
+    const p = parseFloat(thread.dataset.pct) || 0;
+    threadTarget = L * (1 - p / 100);          // dashoffset: L hides all, 0 draws all
+    thread.style.strokeDasharray = L;
+    thread.style.strokeDashoffset = L;         // start at the entrance
+  }
+
+  if (reduce) {
+    if (thread) thread.style.strokeDashoffset = threadTarget;
+    if (fill)   fill.style.width = pct;
+  } else {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (thread) thread.style.strokeDashoffset = threadTarget;
+      if (fill)   fill.style.width = pct;
+    }));
+  }
+
+  // type the boot line
+  const boot = document.getElementById('boot');
+  if (boot) {
+    const txt = boot.dataset.text;
+    if (reduce) { boot.textContent = txt; }
+    else {
+      let i = 0;
+      (function type() {
+        boot.textContent = txt.slice(0, i++);
+        if (i <= txt.length) setTimeout(type, 16);
+      })();
+    }
+  }
+});
+
+// Back-to-top: reveal after a scroll, smooth-return on click.
+(function () {
+  const btn = document.getElementById('toTop');
+  if (!btn) return;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const onScroll = () => btn.classList.toggle('show', window.scrollY > 400);
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  btn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+  });
+})();
+
+// Remember collapsible open/closed state across the submit reload (per browser).
+(function () {
+  function k(el){ return 'knossos.open.' + el.getAttribute('data-persist'); }
+  document.querySelectorAll('details[data-persist]').forEach(function (el) {
+    try {
+      var v = localStorage.getItem(k(el));
+      if (v === '1') el.open = true; else if (v === '0') el.open = false;
+    } catch (e) {}
+    el.addEventListener('toggle', function () {
+      try { localStorage.setItem(k(el), el.open ? '1' : '0'); } catch (e) {}
+    });
+  });
+})();
+</script>
+
+<button id="toTop" type="button" title="Back to top" aria-label="Back to top">&#9650;</button>
+</body>
+</html>

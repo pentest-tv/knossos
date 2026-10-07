@@ -1,0 +1,84 @@
+digraph knossos {
+  bgcolor="#0a0e14"; rankdir=TB; splines=ortho; nodesep=0.28; ranksep=0.7;
+  node [shape=box, style="rounded,filled", fillcolor="#1a2029", color="#2d3640", fontcolor="#e6edf3", fontname="Helvetica", fontsize=11, margin="0.12,0.07"];
+  edge [color="#2d3640", penwidth=1.1, arrowsize=0.7];
+  labelloc="t"; fontname="Helvetica-Bold"; fontsize=20; fontcolor="#e6edf3"; label=<<FONT POINT-SIZE="20"><B>Knossos Lab Architecture</B></FONT><BR/><FONT POINT-SIZE="10" COLOR="#9aa5b1">by Pentest.TV  &#183;  attack from Kali, pivot through the firewalls to the vault</FONT>>;
+  kali [label=<<B>attacker (Kali)</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.10.10 / 172.28.20.10</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">browser terminal :7681</FONT>>, color="#00F0FF", penwidth=1.6];
+  fw_perim [label=<<B>FIREWALL</B><BR/><FONT POINT-SIZE="8">segmentation</FONT>>, shape=box, style="filled", fillcolor="#20161a", color="#ff6b61", fontcolor="#ff6b61", penwidth=1.6];
+  fw_int [label=<<B>FIREWALL</B><BR/><FONT POINT-SIZE="8">segmentation</FONT>>, shape=box, style="filled", fillcolor="#20161a", color="#ff6b61", fontcolor="#ff6b61", penwidth=1.6];
+  fw_restr [label=<<B>FIREWALL</B><BR/><FONT POINT-SIZE="8">segmentation</FONT>>, shape=box, style="filled", fillcolor="#20161a", color="#ff6b61", fontcolor="#ff6b61", penwidth=1.6];
+  subgraph cluster_dmz {
+    label=<<FONT COLOR="#f5cc6a"><B>DMZ &#183; public-facing perimeter</B></FONT>>; fontsize=12; color="#f5cc6a"; style="rounded"; penwidth=1.4; bgcolor="#0d1117";
+      sw_dmz [label=<<B>DMZ switch</B>  <FONT COLOR="#9aa5b1" POINT-SIZE="9">172.28.10.0/24</FONT>>, shape=box, style="filled", fillcolor="#11161d", color="#f5cc6a", fontcolor="#f5cc6a", penwidth=2, width=3, height=0.4];
+      dns [label=<<B>dns-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.10.34</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">DNS, open zone transfer</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#f5cc6a">&#9679; flag</FONT></FONT>>, color="#f5cc6a", style="rounded,filled"];
+      target [label=<<B>target-linux</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.10.20</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">Samba / vsftpd target</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#f5cc6a">&#9679; flag</FONT>  <FONT COLOR="#778EC1">also 172.28.20.20</FONT></FONT>>, color="#f5cc6a", style="rounded,filled"];
+      web [label=<<B>web-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.10.30</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">DVWA</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#00F0FF">localhost:8081</FONT></FONT>>, color="#2d3640", style="rounded,filled"];
+      juice [label=<<B>juice</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.10.31</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">Juice Shop</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#00F0FF">localhost:3000</FONT></FONT>>, color="#2d3640", style="rounded,filled"];
+      phish [label=<<B>phish-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.10.32</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">Gophish</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#00F0FF">localhost:3333</FONT></FONT>>, color="#2d3640", style="rounded,filled"];
+      mail [label=<<B>mail-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.10.33</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">MailHog sink</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#00F0FF">localhost:8025</FONT></FONT>>, color="#2d3640", style="rounded,filled"];
+      mysql [label=<<B>db-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.10.40</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">MySQL (no password)</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#f5cc6a">&#9679; flag</FONT></FONT>>, color="#f5cc6a", style="rounded,filled"];
+      pg [label=<<B>db-02</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.10.41</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">PostgreSQL (trust)</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#f5cc6a">&#9679; flag</FONT></FONT>>, color="#f5cc6a", style="rounded,filled"];
+      vnc [label=<<B>vnc-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.10.42</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">VNC (weak password)</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#f5cc6a">&#9679; flag</FONT>  <FONT COLOR="#00F0FF">localhost:5901</FONT></FONT>>, color="#f5cc6a", style="rounded,filled"];
+      smtp [label=<<B>smtp-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.10.43</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">SMTP relay / VRFY</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#f5cc6a">&#9679; flag</FONT></FONT>>, color="#f5cc6a", style="rounded,filled"];
+      c2 [label=<<B>c2-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.10.50</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">Sliver C2 server</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#778EC1">also 172.28.20.80</FONT></FONT>>, color="#2d3640", style="rounded,filled"];
+      sso [label=<<B>sso-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.10.72</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">SSO / JWT</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#f5cc6a">&#9679; flag</FONT>  <FONT COLOR="#00F0FF">localhost:8085</FONT></FONT>>, color="#f5cc6a", style="rounded,filled"];
+      hr [label=<<B>hr-app-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.10.73</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">HR portal</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#9aa5b1">decoy</FONT></FONT>>, color="#2d3640", style="rounded,filled,dashed"];
+  }
+  subgraph cluster_int {
+    label=<<FONT COLOR="#00F0FF"><B>INTERNAL &#183; trusted segment</B></FONT>>; fontsize=12; color="#00F0FF"; style="rounded"; penwidth=1.4; bgcolor="#0d1117";
+      sw_int [label=<<B>Internal switch</B>  <FONT COLOR="#9aa5b1" POINT-SIZE="9">172.28.20.0/24</FONT>>, shape=box, style="filled", fillcolor="#11161d", color="#00F0FF", fontcolor="#00F0FF", penwidth=2, width=3, height=0.4];
+      snmp [label=<<B>net-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.20.40</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">SNMP device</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#f5cc6a">&#9679; flag</FONT></FONT>>, color="#f5cc6a", style="rounded,filled"];
+      pivot [label=<<B>ws-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.20.50</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">Pivot (SSH, privesc)</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#f5cc6a">&#9679; flag</FONT></FONT>>, color="#f5cc6a", style="rounded,filled"];
+      files [label=<<B>files-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.20.60</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">SMB crown-jewel server</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#f5cc6a">&#9679; flag</FONT></FONT>>, color="#f5cc6a", style="rounded,filled"];
+      victim [label=<<B>ws-02</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.20.61</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">Cleartext FTP (ARP MITM)</FONT>>, color="#2d3640", style="rounded,filled"];
+      wksta [label=<<B>ws-03</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.20.70</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">Drop share, SUID/sudo</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#f5cc6a">&#9679; flag</FONT></FONT>>, color="#f5cc6a", style="rounded,filled"];
+      ldap [label=<<B>ldap-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.20.90</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">LDAP, anonymous bind</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#f5cc6a">&#9679; flag</FONT></FONT>>, color="#f5cc6a", style="rounded,filled"];
+      intra [label=<<B>web-03</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.20.130</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">Intranet, hidden /backup</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#f5cc6a">&#9679; flag</FONT>  <FONT COLOR="#00F0FF">localhost:8082</FONT></FONT>>, color="#f5cc6a", style="rounded,filled"];
+      git [label=<<B>git-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.20.131</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">Git/CI, secrets in history</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#f5cc6a">&#9679; flag</FONT>  <FONT COLOR="#00F0FF">localhost:8083</FONT></FONT>>, color="#f5cc6a", style="rounded,filled"];
+      wiki [label=<<B>wiki-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.20.132</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">Wiki, leaks creds</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#f5cc6a">&#9679; flag</FONT>  <FONT COLOR="#00F0FF">localhost:8084</FONT></FONT>>, color="#f5cc6a", style="rounded,filled"];
+      jump [label=<<B>jump-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.20.100</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">Jump host</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#778EC1">also 172.28.30.10</FONT></FONT>>, color="#2d3640", style="rounded,filled"];
+      log [label=<<B>log-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.20.110</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">Log collector</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#f5cc6a">&#9679; flag</FONT></FONT>>, color="#f5cc6a", style="rounded,filled"];
+      print [label=<<B>print-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.20.120</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">Printer</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#9aa5b1">decoy</FONT></FONT>>, color="#2d3640", style="rounded,filled,dashed"];
+  }
+  subgraph cluster_restr {
+    label=<<FONT COLOR="#ff6b61"><B>RESTRICTED &#183; crown jewels</B></FONT>>; fontsize=12; color="#ff6b61"; style="rounded"; penwidth=1.4; bgcolor="#0d1117";
+      sw_restr [label=<<B>Restricted switch</B>  <FONT COLOR="#9aa5b1" POINT-SIZE="9">172.28.30.0/24</FONT>>, shape=box, style="filled", fillcolor="#11161d", color="#ff6b61", fontcolor="#ff6b61", penwidth=2, width=3, height=0.4];
+      vault [label=<<B>vault-01</B><BR/><FONT COLOR="#00F0FF" POINT-SIZE="9">172.28.30.20</FONT><BR/><FONT COLOR="#9aa5b1" POINT-SIZE="9">Crown-jewel vault</FONT><BR/><FONT POINT-SIZE="8"><FONT COLOR="#f5cc6a">&#9679; flag</FONT></FONT>>, color="#f5cc6a", style="rounded,filled"];
+  }
+  kali -> fw_perim [color="#00F0FF", penwidth=2];
+  fw_perim -> sw_dmz [color="#f5cc6a", penwidth=2];
+  sw_dmz -> fw_int [color="#f5cc6a", penwidth=2];
+  fw_int -> sw_int [color="#00F0FF", penwidth=2];
+  sw_int -> fw_restr [color="#00F0FF", penwidth=2];
+  fw_restr -> sw_restr [color="#ff6b61", penwidth=2];
+  sw_dmz -> dns [dir=none];
+  sw_dmz -> target [dir=none];
+  sw_dmz -> web [dir=none];
+  sw_dmz -> juice [dir=none];
+  sw_dmz -> phish [dir=none];
+  sw_dmz -> mail [dir=none];
+  sw_dmz -> mysql [dir=none];
+  sw_dmz -> pg [dir=none];
+  sw_dmz -> vnc [dir=none];
+  sw_dmz -> smtp [dir=none];
+  sw_dmz -> c2 [dir=none];
+  sw_dmz -> sso [dir=none];
+  sw_dmz -> hr [dir=none];
+  sw_int -> snmp [dir=none];
+  sw_int -> pivot [dir=none];
+  sw_int -> files [dir=none];
+  sw_int -> victim [dir=none];
+  sw_int -> wksta [dir=none];
+  sw_int -> ldap [dir=none];
+  sw_int -> intra [dir=none];
+  sw_int -> git [dir=none];
+  sw_int -> wiki [dir=none];
+  sw_int -> jump [dir=none];
+  sw_int -> log [dir=none];
+  sw_int -> print [dir=none];
+  sw_restr -> vault [dir=none];
+  target -> sw_int [dir=none, color="#778EC1", style=dashed, constraint=false, fontcolor="#778EC1", fontsize=8, label="dual-homed"];
+  c2 -> sw_int [dir=none, color="#778EC1", style=dashed, constraint=false, fontcolor="#778EC1", fontsize=8, label="dual-homed"];
+  jump -> sw_restr [dir=none, color="#778EC1", style=dashed, constraint=false, fontcolor="#778EC1", fontsize=8, label="dual-homed"];
+  kali -> sw_int [dir=none, color="#778EC1", style=dashed, constraint=false, fontcolor="#778EC1", fontsize=8, label="dual-homed"];
+}

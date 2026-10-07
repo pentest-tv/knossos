@@ -1,0 +1,10 @@
+# Per-deploy flag values; never commit.
+flags.generated.env
+
+# Local backups from sed pinning.
+.env.bak
+
+# Python / editor cruft
+__pycache__/
+*.pyc
+.DS_Store

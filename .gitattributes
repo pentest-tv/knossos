@@ -1,0 +1,12 @@
+# Force LF for all text files on checkout, on every OS. Shell scripts and Dockerfiles
+# run inside Linux containers and break with CRLF (bad interpreter: /bin/sh^M), so this
+# keeps a Windows clone from corrupting them.
+* text=auto eol=lf
+
+# PowerShell is native to Windows; keep CRLF for it.
+*.ps1 text eol=crlf
+
+# Binary types, never line-ending converted.
+*.png binary
+*.jpg binary
+*.gz binary

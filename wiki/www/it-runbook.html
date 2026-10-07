@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>IT Operations Runbook - Pentest.TV Wiki</title>
+<style>body{font-family:system-ui,sans-serif;max-width:720px;margin:40px auto;line-height:1.5}
+code{background:#f2f2f2;padding:1px 5px;border-radius:4px}</style></head>
+<body>
+  <h1>IT Operations Runbook</h1>
+  <p>For infrastructure operations. Keep this page internal.</p>
+
+  <h2>Restricted segment access</h2>
+  <p>The vault segment is reachable only from the jump host. To get to the jump host, use
+     the shared operations account:</p>
+  <ul>
+    <li>Host: <code>jump-01.pentesttv.local</code> (172.28.20.100)</li>
+    <li>Account: <code>opsadmin</code></li>
+    <li>Password: <code>OpsTransit#2024</code></li>
+  </ul>
+  <p>From the jump host, follow the handover notes in opsadmin's home for the vault
+     credentials. Rotate quarterly (overdue).</p>
+
+  <h2>Monitoring</h2>
+  <p>Central log collector at <code>log-01.pentesttv.local</code>. Export dir is published
+     read-only at <code>http://log-01/export/</code> for the dashboards.</p>
+
+  <h2>Change control token</h2>
+  <p>This quarter's runbook verification token: <code>PENTESTTV{wiki_pages_leak_operational_creds}</code></p>
+</body>
+</html>

@@ -1,0 +1,14 @@
+Pentest.TV IT - Helpdesk Notes (internal)
+
+Ticket #0442 - Workstation handover
+  User:        jsmith  (jsmith@pentesttv.local)
+  Workstation: ws-01.pentesttv.local  (172.28.20.50)
+  Access:      SSH enabled for remote administration
+  Note:        Temporary password set during onboarding. jsmith has not
+               rotated it yet. Follow up at the next access review.
+
+Ticket #0443 - SNMP monitoring
+  Device:      net-01  (172.28.20.40)
+  Contact:     jsmith@pentesttv.local
+
+All data in this lab is fictional and generated for training.

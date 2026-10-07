@@ -1,0 +1,8 @@
+Pentest.TV - Q3 Financial Forecast (CONFIDENTIAL - internal only)
+
+Projected revenue:        $4.82M
+Operating expenses:       $3.11M
+Headcount plan:           +6 (Engineering 4, Sales 2)
+Vendor renewals due:      cloud hosting, SIEM, endpoint EDR
+
+Note: this data is fictional and generated for training.

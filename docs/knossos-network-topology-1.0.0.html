@@ -1,0 +1,82 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Knossos Lab Network Topology</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+:root{--bg:#0a0e14;--panel:#11161d;--panel2:#161c25;--panel3:#1a2029;--line:#232a33;--line2:#2d3640;
+--ink:#e6edf3;--muted:#9aa5b1;--muted2:#6b7785;--cyan:#00F0FF;--slate:#778EC1;--gold:#f5cc6a;--crit:#ff6b61;
+--mono:'JetBrains Mono',ui-monospace,monospace;--disp:'Space Grotesk',system-ui,sans-serif;--body:'Inter',system-ui,sans-serif;}
+*{box-sizing:border-box;}
+body{margin:0;background:
+ radial-gradient(1200px 500px at 80% -5%,rgba(0,240,255,.07),transparent 60%),
+ radial-gradient(900px 500px at 5% 5%,rgba(245,204,106,.05),transparent 55%),var(--bg);
+ color:var(--ink);font-family:var(--body);padding:30px 34px 40px;}
+.head{display:flex;align-items:center;gap:16px;margin-bottom:6px;}
+.head img{height:46px;}
+.htext h1{font-family:var(--disp);font-size:24px;margin:0;font-weight:700;letter-spacing:-.01em;}
+.htext .sub{font-family:var(--mono);font-size:12px;color:var(--muted2);letter-spacing:.1em;text-transform:uppercase;margin-top:3px;}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin:16px 0 22px;font-family:var(--mono);font-size:11.5px;color:var(--muted);}
+.legend span b{color:var(--ink);font-weight:600;}
+.dotf{color:var(--gold);} .dotp{color:var(--cyan);} .dotd{color:var(--muted2);} .dotu{color:var(--slate);}
+.band{border:1px solid var(--line);border-radius:14px;background:linear-gradient(180deg,var(--panel),var(--panel2));
+ padding:16px 18px 18px;position:relative;}
+.band.attack{border-left:3px solid var(--cyan);}
+.band.dmz{border-left:3px solid var(--gold);}
+.band.internal{border-left:3px solid var(--cyan);}
+.band.restricted{border-left:3px solid var(--crit);}
+.bhead{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+ display:flex;align-items:baseline;gap:12px;margin-bottom:14px;}
+.band.attack .bhead{color:var(--cyan);} .band.dmz .bhead{color:var(--gold);}
+.band.internal .bhead{color:var(--cyan);} .band.restricted .bhead{color:var(--crit);}
+.bhead .cidr{color:var(--muted2);font-weight:500;letter-spacing:.04em;}
+.bhead .note{margin-left:auto;color:var(--muted2);font-weight:400;letter-spacing:.02em;text-transform:none;font-size:11.5px;}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;}
+.node{background:var(--panel3);border:1px solid var(--line);border-radius:10px;padding:11px 13px;min-width:0;}
+.node.isflag{border-color:rgba(245,204,106,.28);}
+.node.isdecoy{opacity:.72;border-style:dashed;}
+.nname{font-family:var(--disp);font-weight:600;font-size:14px;}
+.nip{font-family:var(--mono);font-size:12px;color:var(--cyan);margin-top:1px;}
+.nrole{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.4;min-height:32px;}
+.ntags{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;}
+.tag{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:5px;border:1px solid var(--line2);color:var(--muted);}
+.tag.flag{color:var(--gold);border-color:rgba(245,204,106,.35);background:rgba(245,204,106,.06);}
+.tag.port{color:var(--cyan);border-color:rgba(0,240,255,.3);background:rgba(0,240,255,.05);}
+.tag.dual{color:var(--slate);border-color:rgba(119,142,193,.35);}
+.tag.decoy{color:var(--muted2);}
+.gate{display:flex;justify-content:center;padding:11px 0;}
+.gatepill{font-family:var(--mono);font-size:12px;border-radius:100px;padding:7px 18px;text-align:center;}
+.gatepill.inward{color:var(--gold);border:1px solid rgba(245,204,106,.35);background:rgba(245,204,106,.06);}
+.gatepill.jump{color:var(--crit);border:1px solid rgba(255,107,97,.35);background:rgba(255,107,97,.06);}
+.gatepill.enter{color:var(--cyan);border:1px solid rgba(0,240,255,.3);background:rgba(0,240,255,.05);}
+.foot{font-family:var(--mono);font-size:11px;color:var(--muted2);margin-top:22px;text-align:center;}
+.foot b{color:var(--cyan);}
+@media (max-width:1100px){.grid{grid-template-columns:repeat(2,1fr);}}
+</style></head><body>
+
+<div class="head">
+  <img src="knossos-lockup-dark-bg-1.0.0.svg" alt="Knossos by Pentest.TV"
+       onerror="this.style.display='none'">
+  <div class="htext"><h1>Knossos Lab Network Topology</h1>
+  <div class="sub">by Pentest.TV &middot; three tiers &middot; attack from Kali, pivot to the center</div></div>
+</div>
+
+<div class="legend">
+  <span><b class="dotf">&#9632;</b> flag-bearing target</span>
+  <span><b class="dotp">&#9632;</b> published on your host (localhost:port)</span>
+  <span><b class="dotu">&#9632;</b> dual-homed (spans two networks)</span>
+  <span><b class="dotd">&#9632;</b> decoy / noise (dashed)</span>
+</div>
+
+<div class="band attack"><div class="bhead">Attack Platform <span class="note">your box; everything else is a target</span></div><div class="grid"><div class="node"><div class="nname">attacker (Kali)</div><div class="nip">172.28.10.10</div><div class="nrole">Attacker box, browser terminal :7681</div><div class="ntags"><span class="tag port">localhost:7681</span><span class="tag dual">also 172.28.20.10</span></div></div></div></div>
+<div class="gate"><span class="gatepill enter">&darr; Kali reaches the DMZ directly, and sits on the internal network too</span></div>
+
+<div class="band dmz"><div class="bhead">DMZ <span class="cidr">172.28.10.0/24</span><span class="note">public-facing perimeter</span></div><div class="grid"><div class="node isflag"><div class="nname">dns-01</div><div class="nip">172.28.10.34</div><div class="nrole">Authoritative DNS, open zone transfer</div><div class="ntags"><span class="tag flag">flag</span></div></div><div class="node isflag"><div class="nname">target-linux (dmz-01)</div><div class="nip">172.28.10.20</div><div class="nrole">Linux exploit target (Samba, vsftpd)</div><div class="ntags"><span class="tag flag">flag</span><span class="tag dual">also 172.28.20.20</span></div></div><div class="node"><div class="nname">web-01</div><div class="nip">172.28.10.30</div><div class="nrole">DVWA web app</div><div class="ntags"><span class="tag port">localhost:8081</span></div></div><div class="node"><div class="nname">juice</div><div class="nip">172.28.10.31</div><div class="nrole">Juice Shop (modern web)</div><div class="ntags"><span class="tag port">localhost:3000</span></div></div><div class="node"><div class="nname">phish-01</div><div class="nip">172.28.10.32</div><div class="nrole">Gophish phishing framework</div><div class="ntags"><span class="tag port">localhost:3333</span></div></div><div class="node"><div class="nname">mail-01</div><div class="nip">172.28.10.33</div><div class="nrole">MailHog sink</div><div class="ntags"><span class="tag port">localhost:8025</span></div></div><div class="node isflag"><div class="nname">db-01</div><div class="nip">172.28.10.40</div><div class="nrole">MySQL, remote root no password</div><div class="ntags"><span class="tag flag">flag</span></div></div><div class="node isflag"><div class="nname">db-02</div><div class="nip">172.28.10.41</div><div class="nrole">PostgreSQL, trust auth</div><div class="ntags"><span class="tag flag">flag</span></div></div><div class="node isflag"><div class="nname">vnc-01</div><div class="nip">172.28.10.42</div><div class="nrole">VNC desktop, weak password</div><div class="ntags"><span class="tag flag">flag</span><span class="tag port">localhost:5901</span></div></div><div class="node isflag"><div class="nname">smtp-01</div><div class="nip">172.28.10.43</div><div class="nrole">SMTP open relay, VRFY</div><div class="ntags"><span class="tag flag">flag</span></div></div><div class="node"><div class="nname">c2-01</div><div class="nip">172.28.10.50</div><div class="nrole">Sliver C2 server</div><div class="ntags"><span class="tag dual">also 172.28.20.80</span></div></div><div class="node isflag"><div class="nname">sso-01</div><div class="nip">172.28.10.72</div><div class="nrole">SSO/JWT, weak HS256 secret</div><div class="ntags"><span class="tag flag">flag</span><span class="tag port">localhost:8085</span></div></div><div class="node isdecoy"><div class="nname">hr-app-01</div><div class="nip">172.28.10.73</div><div class="nrole">HR portal</div><div class="ntags"><span class="tag decoy">decoy</span></div></div></div></div>
+<div class="gate"><span class="gatepill inward">&darr; pivot inward &middot; the internal segment has no outbound route; reach it through an owned DMZ host</span></div>
+
+<div class="band internal"><div class="bhead">Internal <span class="cidr">172.28.20.0/24</span><span class="note">trusted segment</span></div><div class="grid"><div class="node isflag"><div class="nname">net-01</div><div class="nip">172.28.20.40</div><div class="nrole">SNMP device, oversharing</div><div class="ntags"><span class="tag flag">flag</span></div></div><div class="node isflag"><div class="nname">ws-01 (pivot)</div><div class="nip">172.28.20.50</div><div class="nrole">Internal foothold (SSH, privesc, C2)</div><div class="ntags"><span class="tag flag">flag</span></div></div><div class="node isflag"><div class="nname">files-01</div><div class="nip">172.28.20.60</div><div class="nrole">Crown-jewel SMB file server</div><div class="ntags"><span class="tag flag">flag</span></div></div><div class="node"><div class="nname">ws-02 (victim)</div><div class="nip">172.28.20.61</div><div class="nrole">Cleartext FTP for ARP MITM</div><div class="ntags"></div></div><div class="node isflag"><div class="nname">ws-03 (workstation)</div><div class="nip">172.28.20.70</div><div class="nrole">Payload drop share, SUID/sudo</div><div class="ntags"><span class="tag flag">flag</span></div></div><div class="node isflag"><div class="nname">ldap-01</div><div class="nip">172.28.20.90</div><div class="nrole">LDAP directory, anonymous bind</div><div class="ntags"><span class="tag flag">flag</span></div></div><div class="node isflag"><div class="nname">web-03 (intranet)</div><div class="nip">172.28.20.130</div><div class="nrole">Intranet, hidden /backup</div><div class="ntags"><span class="tag flag">flag</span><span class="tag port">localhost:8082</span></div></div><div class="node isflag"><div class="nname">git-01</div><div class="nip">172.28.20.131</div><div class="nrole">Git/CI, secrets in history</div><div class="ntags"><span class="tag flag">flag</span><span class="tag port">localhost:8083</span></div></div><div class="node isflag"><div class="nname">wiki-01</div><div class="nip">172.28.20.132</div><div class="nrole">Internal wiki, leaks creds</div><div class="ntags"><span class="tag flag">flag</span><span class="tag port">localhost:8084</span></div></div><div class="node"><div class="nname">jump-01</div><div class="nip">172.28.20.100</div><div class="nrole">Jump host into restricted segment</div><div class="ntags"><span class="tag dual">also 172.28.30.10</span></div></div><div class="node isflag"><div class="nname">log-01</div><div class="nip">172.28.20.110</div><div class="nrole">Central log collector, leaks a cred</div><div class="ntags"><span class="tag flag">flag</span></div></div><div class="node isdecoy"><div class="nname">print-01</div><div class="nip">172.28.20.120</div><div class="nrole">Networked printer</div><div class="ntags"><span class="tag decoy">decoy</span></div></div></div></div>
+<div class="gate"><span class="gatepill jump">&darr; jump host only &middot; the restricted segment is reachable only from jump-01 (172.28.30.10)</span></div>
+
+<div class="band restricted"><div class="bhead">Restricted <span class="cidr">172.28.30.0/24</span><span class="note">crown jewels</span></div><div class="grid"><div class="node isflag"><div class="nname">vault-01</div><div class="nip">172.28.30.20</div><div class="nrole">Crown-jewel vault, via jump host only</div><div class="ntags"><span class="tag flag">flag</span></div></div></div></div>
+
+<div class="foot">Control plane: <b>pentesttv-scoreboard</b> at localhost:8890 (out of scope). &middot; target-linux and c2-01 span DMZ+Internal; jump-01 spans Internal+Restricted.</div>
+</body></html>

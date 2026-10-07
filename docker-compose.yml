@@ -1,0 +1,627 @@
+# Pentest.TV lab: the containerizable majority of the course in one deploy.
+# Covers Recon, Exploitation, Delivery, C2 pivoting, Web application, and Network modules.
+# Not here (cannot containerize): Active Directory (VM, see ../range), wireless
+# (handshake file), cloud (student AWS). See README.md.
+#
+# Images are pinned by digest via .env. Generate it once on a Docker host that can
+# reach Docker Hub:  ./scripts/pin-digests.sh   (or scripts\pin-digests.ps1 on Windows)
+# then commit .env. Students then only run:  docker compose up -d
+#
+# Image vars have tag fallbacks so the file still validates before pinning, but ship
+# the pinned .env so students never pull a moving tag.
+
+name: pentesttv-lab
+
+networks:
+  dmz:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.10.0/24
+  internal:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.28.20.0/24
+  # Restricted segment: no outbound, and reachable only via the jump host, which bridges
+  # internal and restricted. Models an enterprise's most-protected tier.
+  restricted:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.28.30.0/24
+
+volumes:
+  loot_target:
+  loot_pivot:
+  loot_root_pivot:
+  loot_svcapp:
+  loot_spray:
+  loot_files:
+  loot_ws:
+  loot_wsroot:
+  loot_web:
+  loot_logs:
+  loot_vault:
+  flags_shared:
+  svc_flags:
+  c2_config:
+  c2_state:
+  scoreboard_db:
+  dns_zone:
+
+services:
+
+  # Linux target: exploitation module. vsftpd (walkthrough) and Samba (graded lab).
+  target-linux:
+    image: ${TARGET_IMAGE:-tleemcjr/metasploitable2:latest}
+    container_name: pentesttv-target
+    hostname: dmz-01.pentesttv.local
+    restart: unless-stopped
+    # Start the vulnerable services, then hold the container open (no TTY in detached mode).
+    command: ["/bin/sh", "-c", "/bin/services.sh && tail -f /dev/null"]
+    networks:
+      dmz:
+        ipv4_address: 172.28.10.20
+      internal:
+        ipv4_address: 172.28.20.20
+    volumes:
+      - loot_target:/root/ctf
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -ltn | grep -q ':21 ' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  # Web app target: web application module (DVWA).
+  web:
+    image: ${DVWA_IMAGE:-vulnerables/web-dvwa:latest}
+    container_name: pentesttv-web
+    hostname: web-01.pentesttv.local
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8081}:80"
+    networks:
+      dmz:
+        ipv4_address: 172.28.10.30
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/80' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  # Modern web app target: pairs a current OWASP app alongside the dated DVWA.
+  juice:
+    image: ${JUICE_IMAGE:-bkimminich/juice-shop:latest}
+    container_name: pentesttv-juice
+    hostname: web-02.pentesttv.local
+    restart: unless-stopped
+    ports:
+      - "${JUICE_PORT:-3000}:3000"
+    networks:
+      dmz:
+        ipv4_address: 172.28.10.31
+
+  # Phishing framework for the Delivery / social engineering module. Sends campaigns
+  # to MailHog so no mail leaves the lab. Admin UI on 3333, landing server on 8088.
+  gophish:
+    image: ${GOPHISH_IMAGE:-gophish/gophish:latest}
+    container_name: pentesttv-gophish
+    hostname: phish-01.pentesttv.local
+    restart: unless-stopped
+    volumes:
+      - ./gophish/config.json:/opt/gophish/config.json:ro
+    ports:
+      - "${GOPHISH_ADMIN_PORT:-3333}:3333"
+      - "${GOPHISH_PHISH_PORT:-8088}:80"
+    networks:
+      dmz:
+        ipv4_address: 172.28.10.32
+
+  # Mail sink: catches every phishing email. SMTP on 1025 (internal), UI on 8025.
+  mailhog:
+    image: ${MAILHOG_IMAGE:-mailhog/mailhog:latest}
+    container_name: pentesttv-mail
+    hostname: mail-01.pentesttv.local
+    restart: unless-stopped
+    ports:
+      - "${MAILHOG_UI_PORT:-8025}:8025"
+    networks:
+      dmz:
+        ipv4_address: 172.28.10.33
+
+  # Crown-jewel internal file server: Actions on Objectives target. Guest SMB share
+  # with planted data; the exfil flag is written into the share at deploy.
+  files:
+    build:
+      context: ./files
+      args:
+        BASE_DEBIAN: ${BASE_DEBIAN:-debian:stable-slim}
+    container_name: pentesttv-files
+    hostname: files-01.pentesttv.local
+    restart: unless-stopped
+    networks:
+      internal:
+        ipv4_address: 172.28.20.60
+    volumes:
+      - loot_files:/srv/share/loot
+
+  # Authoritative DNS for pentesttv.local. Zone transfer (AXFR) is deliberately open:
+  # dig axfr pentesttv.local @172.28.10.34 dumps the zone, including the flag TXT record.
+  # The zone file is written per deploy by flag-init onto the dns_zone volume.
+  dns:
+    image: ${BIND_IMAGE:-internetsystemsconsortium/bind9:9.20}
+    container_name: pentesttv-dns
+    hostname: dns-01.pentesttv.local
+    restart: unless-stopped
+    # Run as root so named can bind 53 and write its working directory. The config is
+    # bind-mounted (not baked into an image), so editing dns/named.conf and restarting
+    # the container always takes effect: there is no build layer to cache.
+    user: root
+    entrypoint: ["/usr/sbin/named"]
+    command: ["-g", "-c", "/etc/bind/named.conf"]
+    depends_on:
+      flag-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./dns/named.conf:/etc/bind/named.conf:ro
+      - dns_zone:/zones:ro
+    networks:
+      dmz:
+        ipv4_address: 172.28.10.34
+
+  # Database target: MySQL exploitation (book ch 9). Remote root with no password. The
+  # flag is seeded into corp.secrets at init from the per-deploy svc_flags volume.
+  mysql:
+    image: ${MYSQL_IMAGE:-mysql:8.4}
+    container_name: pentesttv-mysql
+    hostname: db-01.pentesttv.local
+    restart: unless-stopped
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    depends_on:
+      flag-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./mysql/seed.sh:/docker-entrypoint-initdb.d/10-seed.sh:ro
+      - svc_flags:/svc:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h127.0.0.1 --silent || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    networks:
+      dmz:
+        ipv4_address: 172.28.10.40
+
+  # Database target: PostgreSQL exploitation (book ch 9). Trust auth means no password
+  # from anywhere. The flag is seeded into secrets at init from the svc_flags volume.
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:16}
+    container_name: pentesttv-postgres
+    hostname: db-02.pentesttv.local
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: corp
+    depends_on:
+      flag-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./postgres/seed.sh:/docker-entrypoint-initdb.d/10-seed.sh:ro
+      - svc_flags:/svc:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      dmz:
+        ipv4_address: 172.28.10.41
+
+  # Remote desktop target: VNC exploitation (book ch 9). Weak password "password"; the
+  # flag waits on the desktop once connected. Published on a host port because a VNC
+  # viewer is a GUI tool you run from your own OS, like Burp.
+  vnc:
+    build:
+      context: ./vnc
+      args:
+        BASE_DEBIAN: ${BASE_DEBIAN:-debian:stable-slim}
+    container_name: pentesttv-vnc
+    hostname: vnc-01.pentesttv.local
+    restart: unless-stopped
+    depends_on:
+      flag-init:
+        condition: service_completed_successfully
+    volumes:
+      - svc_flags:/svc:ro
+    ports:
+      - "${VNC_PORT:-5901}:5900"
+    networks:
+      dmz:
+        ipv4_address: 172.28.10.42
+
+  # Mail target: SMTP open relay + VRFY user enumeration (book ch 9). Local users,
+  # including jsmith, can be confirmed with VRFY, a fourth path to that username.
+  smtp:
+    build:
+      context: ./smtp
+      args:
+        BASE_DEBIAN: ${BASE_DEBIAN:-debian:stable-slim}
+    container_name: pentesttv-smtp
+    hostname: smtp-01.pentesttv.local
+    restart: unless-stopped
+    depends_on:
+      flag-init:
+        condition: service_completed_successfully
+    volumes:
+      - svc_flags:/svc:ro
+    networks:
+      dmz:
+        ipv4_address: 172.28.10.43
+
+  # Dedicated Sliver C2 server (book ch 11, modern command and control). Writes an
+  # operator config to the shared c2_config volume for the Kali client to import. On both
+  # networks so implants on the internal workstation can beacon back to it.
+  c2:
+    build:
+      context: ./c2
+      args:
+        BASE_DEBIAN: ${BASE_DEBIAN:-debian:stable-slim}
+        SLIVER_VERSION: ${SLIVER_VERSION:-v1.5.43}
+    container_name: pentesttv-c2
+    hostname: c2-01.pentesttv.local
+    restart: unless-stopped
+    volumes:
+      - c2_config:/shared
+      # Persist the Sliver server identity (CA, certs) so recreating the
+      # container does not invalidate the operator.cfg students already imported.
+      - c2_state:/root/.sliver
+    networks:
+      dmz:
+        ipv4_address: 172.28.10.50
+      internal:
+        ipv4_address: 172.28.20.80
+
+  # Intranet web server for the content-discovery module (book ch 6/14). A hidden /backup
+  # directory, found by directory brute forcing, holds the flag (planted via loot_web).
+  intranet:
+    build:
+      context: ./intranet
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12-slim}
+    container_name: pentesttv-intranet
+    hostname: web-03.pentesttv.local
+    restart: unless-stopped
+    depends_on:
+      flag-init:
+        condition: service_completed_successfully
+    volumes:
+      - loot_web:/srv/www/backup
+    ports:
+      - "${INTRANET_PORT:-8082}:80"
+    networks:
+      internal:
+        ipv4_address: 172.28.20.130
+
+  # --- Enterprise surfaces -------------------------------------------------------------
+
+  # LDAP directory (ldap-01). Anonymous bind leaks a service account's password in a
+  # description field, plus the module flag. Enterprise directory enumeration.
+  ldap:
+    build:
+      context: ./ldap
+      args:
+        BASE_DEBIAN: ${BASE_DEBIAN:-debian:stable-slim}
+    container_name: pentesttv-ldap
+    hostname: ldap-01.pentesttv.local
+    restart: unless-stopped
+    networks:
+      internal:
+        ipv4_address: 172.28.20.90
+
+  # Internal source/CI server (git-01). Secrets in git history plus a CI pipeline file.
+  git:
+    build:
+      context: ./git
+      args:
+        BASE_DEBIAN: ${BASE_DEBIAN:-debian:stable-slim}
+    container_name: pentesttv-git
+    hostname: git-01.pentesttv.local
+    restart: unless-stopped
+    ports:
+      - "${GIT_PORT:-8083}:80"
+    networks:
+      internal:
+        ipv4_address: 172.28.20.131
+
+  # Internal wiki (wiki-01). Pages leak the jump-host operations credential and a flag.
+  wiki:
+    build:
+      context: ./wiki
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12-slim}
+    container_name: pentesttv-wiki
+    hostname: wiki-01.pentesttv.local
+    restart: unless-stopped
+    ports:
+      - "${WIKI_PORT:-8084}:80"
+    networks:
+      internal:
+        ipv4_address: 172.28.20.132
+
+  # SSO / JWT token service (sso-01). Weak HS256 secret; forge an admin token for the flag.
+  sso:
+    build:
+      context: ./sso
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12-slim}
+    container_name: pentesttv-sso
+    hostname: sso-01.pentesttv.local
+    restart: unless-stopped
+    depends_on:
+      flag-init:
+        condition: service_completed_successfully
+    volumes:
+      - svc_flags:/svc:ro
+    ports:
+      - "${SSO_PORT:-8085}:80"
+    networks:
+      dmz:
+        ipv4_address: 172.28.10.72
+
+  # Central log collector (log-01). Publishes an app log that leaks a DB credential and an
+  # audit flag over a read-only HTTP export.
+  syslog:
+    image: ${PYTHON_IMAGE:-python:3.12-slim}
+    container_name: pentesttv-syslog
+    hostname: log-01.pentesttv.local
+    restart: unless-stopped
+    depends_on:
+      flag-init:
+        condition: service_completed_successfully
+    command: ["python3", "-m", "http.server", "80", "--directory", "/srv/export"]
+    volumes:
+      - loot_logs:/srv/export:ro
+    networks:
+      internal:
+        ipv4_address: 172.28.20.110
+
+  # Jump host (jump-01) bridging internal and the restricted segment.
+  jump:
+    build:
+      context: ./jump
+      args:
+        BASE_DEBIAN: ${BASE_DEBIAN:-debian:stable-slim}
+    container_name: pentesttv-jump
+    hostname: jump-01.pentesttv.local
+    restart: unless-stopped
+    networks:
+      internal:
+        ipv4_address: 172.28.20.100
+      restricted:
+        ipv4_address: 172.28.30.10
+
+  # Restricted-segment vault (vault-01), reachable only through the jump host.
+  vault:
+    build:
+      context: ./vault
+      args:
+        BASE_DEBIAN: ${BASE_DEBIAN:-debian:stable-slim}
+    container_name: pentesttv-vault
+    hostname: vault-01.pentesttv.local
+    restart: unless-stopped
+    depends_on:
+      flag-init:
+        condition: service_completed_successfully
+    volumes:
+      - loot_vault:/home/svc_vault/loot
+    networks:
+      restricted:
+        ipv4_address: 172.28.30.20
+
+  # Decoy hosts for scale and realism (no flags): a networked printer and an HR portal.
+  printer:
+    image: ${PYTHON_IMAGE:-python:3.12-slim}
+    container_name: pentesttv-printer
+    hostname: print-01.pentesttv.local
+    restart: unless-stopped
+    command: ["python3", "-m", "http.server", "80", "--directory", "/www"]
+    volumes:
+      - ./decoys/printer:/www:ro
+    networks:
+      internal:
+        ipv4_address: 172.28.20.120
+
+  hrportal:
+    image: ${PYTHON_IMAGE:-python:3.12-slim}
+    container_name: pentesttv-hrportal
+    hostname: hr-app-01.pentesttv.local
+    restart: unless-stopped
+    command: ["python3", "-m", "http.server", "80", "--directory", "/www"]
+    volumes:
+      - ./decoys/hrportal:/www:ro
+    networks:
+      dmz:
+        ipv4_address: 172.28.10.73
+
+  # Internal workstation that runs dropped payloads (book ch 7-8 and 12). It has a
+  # world-writable SMB drop share and a loop that executes drops as the victim user, who
+  # holds the payload-delivery and C2 flags. Flags planted per deploy via loot_ws.
+  workstation:
+    build:
+      context: ./workstation
+      args:
+        BASE_DEBIAN: ${BASE_DEBIAN:-debian:stable-slim}
+    container_name: pentesttv-workstation
+    hostname: ws-03.pentesttv.local
+    restart: unless-stopped
+    depends_on:
+      flag-init:
+        condition: service_completed_successfully
+    volumes:
+      - loot_ws:/home/victim/loot
+      - loot_wsroot:/root/ctf
+    networks:
+      internal:
+        ipv4_address: 172.28.20.70
+
+  # Simulated internal user: generates cleartext FTP logins for the ARP MITM lab.
+  victim:
+    build:
+      context: ./victim
+      args:
+        BASE_DEBIAN: ${BASE_DEBIAN:-debian:stable-slim}
+    container_name: pentesttv-victim
+    hostname: ws-02.pentesttv.local
+    restart: unless-stopped
+    networks:
+      internal:
+        ipv4_address: 172.28.20.61
+
+  # Network device simulation: SNMP module.
+  snmp:
+    build:
+      context: ./snmp
+      args:
+        BASE_DEBIAN: ${BASE_DEBIAN:-debian:stable-slim}
+    container_name: pentesttv-snmp
+    hostname: net-01.pentesttv.local
+    restart: unless-stopped
+    depends_on:
+      flag-init:
+        condition: service_completed_successfully
+    volumes:
+      - svc_flags:/svc:ro
+    networks:
+      internal:
+        ipv4_address: 172.28.20.40
+
+  # Internal pivot host: command and control module.
+  pivot:
+    build:
+      context: ./pivot
+      args:
+        BASE_DEBIAN: ${BASE_DEBIAN:-debian:stable-slim}
+    container_name: pentesttv-pivot
+    hostname: ws-01.pentesttv.local
+    restart: unless-stopped
+    networks:
+      internal:
+        ipv4_address: 172.28.20.50
+    volumes:
+      - loot_pivot:/home/jsmith/loot
+      - loot_root_pivot:/root/ctf
+      - loot_svcapp:/home/svcapp/loot
+      - loot_spray:/home/pmorgan/loot
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/22' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  # One-shot: plants per-deploy flags once the targets are healthy, then exits.
+  # No student action required; it runs as part of 'up'.
+  flag-init:
+    image: ${BASE_DEBIAN:-debian:stable-slim}
+    container_name: pentesttv-flaginit
+    depends_on:
+      target-linux:
+        condition: service_started
+      pivot:
+        condition: service_healthy
+      files:
+        condition: service_started
+    environment:
+      FLAG_PREFIX: ${FLAG_PREFIX:-PENTESTTV}
+    volumes:
+      - loot_target:/t
+      - loot_pivot:/p
+      - loot_root_pivot:/pr
+      - loot_svcapp:/ps
+      - loot_spray:/spray
+      - loot_files:/x
+      - loot_ws:/pw
+      - loot_wsroot:/wsr
+      - loot_web:/webroot
+      - loot_logs:/logs
+      - loot_vault:/vault
+      - flags_shared:/sb
+      - svc_flags:/svc
+      - dns_zone:/z
+      - ./scripts/plant-flags.sh:/plant.sh:ro
+      - ./:/out
+    command: ["bash", "/plant.sh"]
+    restart: "no"
+    networks:
+      - internal
+
+  # Local scoreboard: flag submission, scoring, and links to every target.
+  scoreboard:
+    build:
+      context: ./scoreboard
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12-slim}
+    container_name: pentesttv-scoreboard
+    hostname: scoreboard.pentesttv.local
+    restart: unless-stopped
+    depends_on:
+      flag-init:
+        condition: service_completed_successfully
+    environment:
+      FLAGS_FILE: /app/flags/flags.env
+      DB_FILE: /app/db/scoreboard.sqlite
+      COMPOSE_PROJECT: pentesttv-lab
+      # Pentest.TV reward funnel. Blank by default; set KNOSSOS_CLAIM_PASS in your
+      # environment (not committed) to enable the escape-page reward.
+      KNOSSOS_CLAIM_URL: ${KNOSSOS_CLAIM_URL:-https://pentest.tv/knossos/claim}
+      KNOSSOS_CLAIM_PASS: ${KNOSSOS_CLAIM_PASS:-}
+      # Used by the panel's Install button to build the optional Kali box.
+      BASE_KALI: ${BASE_KALI:-kalilinux/kali-rolling:latest}
+    ports:
+      # Bound to localhost only: this panel controls Docker via the mounted socket.
+      - "127.0.0.1:${SCOREBOARD_PORT:-8890}:8888"
+    volumes:
+      - flags_shared:/app/flags:ro
+      - scoreboard_db:/app/db
+      # Read/control the range. Powerful: keep the panel on localhost.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Build context for the Install button (optional Kali attacker).
+      - ./attacker:/project/attacker:ro
+    networks:
+      - dmz
+
+  # Attacker box, in the browser at http://localhost:7681. This is the primary attack
+  # host: the internal segment and the target's service ports are only reachable from
+  # here or by pivoting through the exploited DMZ host, not from the desktop.
+  attacker:
+    build:
+      context: ./attacker
+      args:
+        BASE_KALI: ${BASE_KALI:-kalilinux/kali-rolling:latest}
+        SLIVER_VERSION: ${SLIVER_VERSION:-v1.5.43}
+    container_name: pentesttv-kali
+    hostname: attacker.pentesttv.local
+    volumes:
+      # Sliver operator config written by the C2 server; import it to drive C2 from Kali.
+      - c2_config:/c2:ro
+    # nmap's binary carries cap_net_raw/cap_net_admin; Docker drops NET_ADMIN by
+    # default, which makes exec of the capability-bearing binary fail. Grant them
+    # so raw-packet scans work from the attacker box.
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    ports:
+      - "${TTYD_PORT:-7681}:7681"
+    networks:
+      dmz:
+        ipv4_address: 172.28.10.10
+      internal:
+        ipv4_address: 172.28.20.10

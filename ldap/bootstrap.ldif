@@ -1,0 +1,95 @@
+dn: dc=pentesttv,dc=local
+objectClass: top
+objectClass: dcObject
+objectClass: organization
+o: Pentest.TV
+dc: pentesttv
+
+dn: ou=people,dc=pentesttv,dc=local
+objectClass: organizationalUnit
+ou: people
+
+dn: ou=groups,dc=pentesttv,dc=local
+objectClass: organizationalUnit
+ou: groups
+
+dn: uid=jsmith,ou=people,dc=pentesttv,dc=local
+objectClass: inetOrgPerson
+cn: John Smith
+sn: Smith
+uid: jsmith
+mail: jsmith@pentesttv.local
+title: Systems Administrator
+telephoneNumber: +1-719-555-0101
+
+dn: uid=pmorgan,ou=people,dc=pentesttv,dc=local
+objectClass: inetOrgPerson
+cn: Priya Morgan
+sn: Morgan
+uid: pmorgan
+mail: pmorgan@pentesttv.local
+title: Finance Analyst
+telephoneNumber: +1-719-555-0102
+
+dn: uid=ahill,ou=people,dc=pentesttv,dc=local
+objectClass: inetOrgPerson
+cn: Aaron Hill
+sn: Hill
+uid: ahill
+mail: ahill@pentesttv.local
+title: Help Desk Technician
+telephoneNumber: +1-719-555-0103
+
+dn: uid=mkhan,ou=people,dc=pentesttv,dc=local
+objectClass: inetOrgPerson
+cn: Maya Khan
+sn: Khan
+uid: mkhan
+mail: mkhan@pentesttv.local
+title: HR Manager
+telephoneNumber: +1-719-555-0104
+
+dn: uid=rturner,ou=people,dc=pentesttv,dc=local
+objectClass: inetOrgPerson
+cn: Rachel Turner
+sn: Turner
+uid: rturner
+mail: rturner@pentesttv.local
+title: Software Engineer
+telephoneNumber: +1-719-555-0105
+
+dn: uid=lchen,ou=people,dc=pentesttv,dc=local
+objectClass: inetOrgPerson
+cn: Li Chen
+sn: Chen
+uid: lchen
+mail: lchen@pentesttv.local
+title: Network Engineer
+telephoneNumber: +1-719-555-0106
+
+dn: uid=dwood,ou=people,dc=pentesttv,dc=local
+objectClass: inetOrgPerson
+cn: Derek Wood
+sn: Wood
+uid: dwood
+mail: dwood@pentesttv.local
+title: DevOps Engineer
+telephoneNumber: +1-719-555-0107
+
+dn: uid=opsadmin,ou=people,dc=pentesttv,dc=local
+objectClass: inetOrgPerson
+cn: Operations Admin
+sn: Admin
+uid: opsadmin
+mail: opsadmin@pentesttv.local
+title: Infrastructure Operations
+
+dn: uid=svc_backup,ou=people,dc=pentesttv,dc=local
+objectClass: inetOrgPerson
+cn: Backup Service Account
+sn: Service
+uid: svc_backup
+mail: svc_backup@pentesttv.local
+title: Service Account
+description: Nightly backup service account. Do not disable. Password: ServiceB@ckup2024
+description: audit-token PENTESTTV{ldap_anon_bind_leaks_service_creds}

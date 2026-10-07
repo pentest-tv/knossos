@@ -1,0 +1,9 @@
+customer_id,name,email,city,account_tier,account_balance_usd
+1001,Fictional Freight Co,ap@example.com,Denver,Gold,48250.00
+1002,Example Logistics LLC,billing@example.net,Phoenix,Silver,12980.50
+1003,Sample Shippers Inc,accounts@example.org,Dallas,Gold,76110.00
+1004,Placeholder Transport,finance@example.com,Seattle,Bronze,3420.75
+1005,Demo Distribution,ar@example.net,Chicago,Silver,25600.00
+1006,Test Cartage Group,invoices@example.org,Atlanta,Gold,54890.25
+1007,Mock Movers,payables@example.com,Miami,Bronze,1890.00
+1008,Imaginary Imports,treasury@example.net,Portland,Silver,33120.40
